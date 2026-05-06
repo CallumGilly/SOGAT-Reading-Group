@@ -47,7 +47,7 @@ record P₄ : Set₁ where
     _`+_   : Tm Nat → Tm Nat → Tm Nat
 
 
-model M -- initial, ∀ N model, ∃! M ⇒ N
+-- model M -- initial, ∀ N model, ∃! M ⇒ N
 
 data Ty : Set where
   nat bool : Ty
@@ -71,6 +71,7 @@ P₄.num tm₄ = num
 P₄.isZero tm₄ = isZero
 P₄._`+_ tm₄ = _`+_
 
+-- But then how can we encode the properties for P₅ in this?
 
 
 
