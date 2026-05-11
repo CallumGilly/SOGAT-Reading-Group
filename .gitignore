@@ -1,0 +1,8 @@
+# This allows one to edit .lagda.md and .md file in obsidian by treating this 
+# folder as a vault, without pushing ones settings to the repo. 
+*.obsidian
+
+# Standard Agda gitignore
+*.agdai
+**/MAlonzo/**
+
