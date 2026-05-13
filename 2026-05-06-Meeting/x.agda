@@ -18,7 +18,7 @@ record P₂ : Set₁ where
 -- comp₂₁ : (p : P₂) → P₁
 
 record P₃ : Set₁ where
-  field 
+  field
     Tm     : Set
     true   : Tm
     false  : Tm
@@ -34,7 +34,7 @@ module Ex₃ (p : P₃) where
   prog = A.num 2 A.`+ A.num 2
 
 record P₄ : Set₁ where
-  field 
+  field
     Ty     : Set
     Tm     : Ty → Set
     Bool : Ty
