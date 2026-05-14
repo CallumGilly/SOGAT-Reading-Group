@@ -1,6 +1,6 @@
 This meeting we have:
 - A recap of motivation as to why we are interested in SOGATs
-	- [ ] It could be interesting to write this up nicely in some way, as our reasoning is quite different/ not covered by the reading notes [#2](../../issues/2)
+	- [ ] It could be interesting to write this up nicely in some way, as our reasoning is quite different/ not covered by the reading notes [#2](../../../issues/2)
 - Gone through the exercises and some of our implementations in Agda, up to the definition of a dependent monoid
 
 Over the next week we intend to:
