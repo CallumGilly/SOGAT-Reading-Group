@@ -1,4 +1,4 @@
-{-# OPTIONS --without-K #-}
+--{-# OPTIONS --without-K #-}
 
 open import Data.List as L
 open import Data.Nat
@@ -6,6 +6,7 @@ open import Data.Product
 open import Data.Product.Properties
 open import Relation.Binary.PropositionalEquality
 open ≡-Reasoning
+open import Axiom.UniquenessOfIdentityProofs using (UIP)
 
 infixr 6 _⊡_
 _⊡_ = trans
@@ -75,13 +76,18 @@ exercise4 M .ass {x = x} {y = y} {z = z}
     rewrite (M .ass {x = x} {y = y} {z = z})= subst-id
 
 -- Exercise 5
-exercise5 : ∀ {M} → D-Monoid M → Monoid
-exercise5 {M'} DM .C = ∃ λ x → DM .F x
-exercise5 {M'} DM .prod (xm , xd) (ym , yd) = M' .prod xm ym , DM .prod xd yd
-exercise5 {M'} DM .u = M' .u , DM .u
-exercise5 {M'} DM .idl = Σ-≡,≡→≡ (M' .idl , DM .idl)
-exercise5 {M'} DM .idr = Σ-≡,≡→≡ (M' .idr , DM .idr)
-exercise5 {M'} DM .ass = Σ-≡,≡→≡ (M' .ass , DM .ass)
+exercise5-1 : ∀ {M} → D-Monoid M → Monoid
+exercise5-1 {M'} DM .C = ∃ λ x → DM .F x
+exercise5-1 {M'} DM .prod (xm , xd) (ym , yd) = M' .prod xm ym , DM .prod xd yd
+exercise5-1 {M'} DM .u = M' .u , DM .u
+exercise5-1 {M'} DM .idl = Σ-≡,≡→≡ (M' .idl , DM .idl)
+exercise5-1 {M'} DM .idr = Σ-≡,≡→≡ (M' .idr , DM .idr)
+exercise5-1 {M'} DM .ass = Σ-≡,≡→≡ (M' .ass , DM .ass)
+
+exercise5-2 : ∀ {M} → (DM : D-Monoid M) → M-Morphism (exercise5-1 DM) M
+exercise5-2 {M} DM .C (x , _) = x
+exercise5-2 {M} DM .prod-eq {x , Fx} {y , Fy} = refl
+exercise5-2 {M} DM .u-eq = refl
 
 -- Dependent Morphism
 record DM-Morphism {M : Monoid} (DM : D-Monoid M) : Set₁ where
@@ -105,7 +111,64 @@ M-Initial : (M : Monoid) → Set₁
 M-Initial M = (M' : Monoid) →
                 M-Morphism M M' × (∀ (Mo Mo' : M-Morphism M M') x → (Mo .C x) ≡ Mo' .C x)
 
+-- Uniqueness of equality proofs
+UIP' = ∀ {a} {A : Set a} → UIP A
+
 -- Exercise 7
+exercise7-1 : UIP' → (M : Monoid) → M-Syntax M → M-Initial M
+exercise7-1 _ M DM→DMo M' .proj₁ = G where
+    DM : D-Monoid M
+    DM = exercise4 M'
+
+    DMo : DM-Morphism DM
+    DMo = DM→DMo DM
+
+    G : M-Morphism M M'
+    G .C = DMo .C
+    G .prod-eq = DMo .prod-eq
+    G .u-eq = DMo .u-eq
+exercise7-1 uip M DM→DMo M' .proj₂ Mo Mo' x = G where
+    P : M .C → Set
+    P x = Mo .C x ≡ Mo' .C x
+
+    DM : D-Monoid M
+    DM .F x = P x
+    DM .prod {m1} {m2} x y =
+        Mo .prod-eq ⊡ cong (λ e → M' .prod e _) x
+        ⊡ cong (λ e →  M' .prod _ e) y ⊡ sym (Mo' .prod-eq)
+    DM .u = Mo .u-eq ⊡ sym (Mo' .u-eq)
+    DM .idl {m} {x} = uip _ _
+    DM .idr = uip _ _
+    DM .ass {m1} {m2} {m3} {x} {y} {z} = uip _ _
+
+    DMo : DM-Morphism DM
+    DMo = DM→DMo DM
+
+    G = DMo .C x
+
+uM-Initial : UIP' → M-Initial uM
+uM-Initial uip M' = exercise7-1 uip uM (proj₂ exercise6) M'
+
+exercise7-2 : UIP' → (M : Monoid) → M-Initial M → M-Syntax M
+exercise7-2 uip I I→IoxU DI = G where
+    I→Io : (M' : Monoid) → M-Morphism I M'
+    I→Io M' = proj₁ (I→IoxU M')
+
+    uM→uMo : (M' : Monoid) → M-Morphism uM M'
+    uM→uMo M' = proj₁ (uM-Initial uip M')
+
+    uMIo : M-Morphism uM I
+    uMIo = uM→uMo I
+
+    IuMo : M-Morphism I uM
+    IuMo = I→Io uM
+
+    DMo : DM-Morphism DI
+    DMo = {!   !}
+
+    G = DMo
+
+{-
 exercise7-1 : (M : Monoid) → M-Syntax M → M-Initial M
 exercise7-1 M DM→DMo M' .proj₁ = G where
     DM : D-Monoid M
@@ -118,8 +181,23 @@ exercise7-1 M DM→DMo M' .proj₁ = G where
     G .C = DMo .C
     G .prod-eq = DMo .prod-eq
     G .u-eq = DMo .u-eq
-exercise7-1 M DM→DMo M' .proj₂ Mo Mo' x = {!   !}
+exercise7-1 M DM→DMo M' .proj₂ Mo Mo' x = G where
+    P : M .C → Set
+    P x = Mo .C x ≡ Mo' .C x
 
+    DM : D-Monoid M
+    DM .F x = P x
+    DM .prod {m1} {m2} x y =
+        Mo .prod-eq ⊡ cong (λ e → M' .prod e _) x
+        ⊡ cong (λ e →  M' .prod _ e) y ⊡ sym (Mo' .prod-eq)
+    DM .u = Mo .u-eq ⊡ sym (Mo' .u-eq)
+    DM .idl {m} {x} = {!  !}
+    -- subst (λ x₂ → P x₂) (M .idl) (Mo .prod-eq ⊡  cong (λ e → M' .prod e (Mo .C m)) (Mo .u-eq ⊡ sym (Mo' .u-eq)) ⊡ cong (M' .prod (Mo' .C (M .u))) x ⊡ sym (Mo' .prod-eq))
+    DM .idr = {!   !}
+    DM .ass {m1} {m2} {m3} {x} {y} {z} = {!   !}
+
+    G = {!   !}
+-}
 
 {-
 -- Exercise 4
