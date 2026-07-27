@@ -376,16 +376,16 @@ module Chapter2-2 where
     DN-pred {S} .base = S .z
     DN-pred {S} .ind {n} _ = n
 
-    DPSE-0≠sn : ∀ {S} → PSE-Syntax S → D-PSE S
-    DPSE-0≠sn {S} syn .P x = (S .z ≡ S .s x) → ⊥
-    DPSE-0≠sn {S} syn .base z≡sz = subst T aux tt where
+    exercise12-1 : ∀ {S} → PSE-Syntax S → D-PSE S
+    exercise12-1 {S} syn .P x = (S .z ≡ S .s x) → ⊥
+    exercise12-1 {S} syn .base z≡sz = subst T aux tt where
         aux : true ≡ false
         aux =
             sym (s-eq (syn _))
             ⊡ sym (sym (z-eq (syn _))
             ⊡ (cong ((syn DN-auxb) .N) z≡sz))
 
-    DPSE-0≠sn {S} syn .ind {n} 0≢sn 0≡ssn = 0≢sn aux where
+    exercise12-1 {S} syn .ind {n} 0≢sn 0≡ssn = 0≢sn aux where
         DNo = syn DN-pred
         aux =
             sym (z-eq DNo)
