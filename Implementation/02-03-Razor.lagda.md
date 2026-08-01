@@ -92,9 +92,7 @@ module Exercise-17 where
     Tm : Ty → Set
   open R 
 
-  ex17 : ∃ λ (Ty : Set₁) 
-       → ∃ λ (Tm : Ty → Set) 
-       → ∃ λ (r : R Ty Tm) 
+  ex17 : ∃₃ λ (Ty : Set₁) (Tm : Ty → Set) (r : R Ty Tm) 
        → num r 1 ≡ num r 2 × true r ≢ false r
   ex17 = -, -, r , refl , λ ()
     where 
@@ -176,9 +174,7 @@ module Exercise-19 where
                   }
 
 
-    ex19₁ : ∃ λ (Ty : Set₁) 
-          → ∃ λ (Tm : Ty → Set) 
-          → ∃ λ (m : R Ty Tm) 
+    ex19₁ : ∃₃ λ (Ty : Set₁) (Tm : Ty → Set) (m : R Ty Tm) 
           → true m ≢ false m × (∀ (t : Tm (Bool m)) (ty : Ty) (u : Tm ty) → ite m t u u ≡ u) 
     ex19₁ = -, -, ℕ𝔹-model , (λ ()) , λ { ⊤ᵇ _ _ → refl ; ⊥ᵇ _ _ → refl }
     
@@ -206,9 +202,7 @@ module Exercise-19 where
   module Part-05 where
     open R
 
-    ex19₅′ : ∃ λ (Ty : Set₁) 
-           → ∃ λ (Tm : Ty → Set) 
-           → ∃ λ (r : R Ty Tm) 
+    ex19₅′ : ∃₃ λ (Ty : Set₁) (Tm : Ty → Set) (r : R Ty Tm) 
            → ∀ (t : Tm (Bool r)) {τ : Ty} (u : Tm τ) → Tm (Bool r) ≡ ℕ
     ex19₅′ = -, -, r , λ _ _ → refl
       where
@@ -362,7 +356,7 @@ module Syntax
   where
   open R
 
-  R-Syn : (rₘ : R Tyₘ Tmₘ) → Set₁
+  R-Syn : R Tyₘ Tmₘ → Set₁
   R-Syn rₘ = ∀ (Tyᵈ : Tyₘ → Set) 
            → ∀ (Tmᵈ : {Aₘ : Tyₘ} → Tyᵈ Aₘ → Tmₘ Aₘ → Set) 
            → ∀ (rᵈ : R-Dep Tyₘ Tmₘ rₘ Tyᵈ Tmᵈ) 
@@ -371,6 +365,35 @@ module Syntax
                   Σ ({Aₘ : Tyₘ} → (uₘ : Tmₘ Aₘ) → (Tmᵈ (Ty Aₘ) uₘ)) 
                     (λ Tm → R-Sec Tyₘ Tmₘ rₘ Tyᵈ Tmᵈ rᵈ Ty Tm)
               )
+```
+# Unique
+
+```agda
+module Unique 
+    (Tyₘ₁ Tyₘ₂ : Set₁)
+    (Tmₘ₁ : Tyₘ₁ → Set)
+    (Tmₘ₂ : Tyₘ₂ → Set)
+  where
+  {-
+  R-Unq : ∀ {r₁ : R Tyₘ₁ Tmₘ₁} {r₂ : R Tyₘ₂ Tmₘ₂} 
+        → ?
+        -}
+
+```
+
+# Initial-Model
+```agda
+module Initial 
+    (Tyₘ : Set₁)
+    (Tmₘ : Tyₘ → Set)
+  where
+  {-
+  R-Int : R Tyₘ Tmₘ → Set₂
+  R-Int rₘ = ∀ (Tyₘ′ : Set₁) 
+           → ∀ (Tmₘ′ : Tyₘ′ → Set)
+           → ∀ (rₘ′  : R Tyₘ′ Tmₘ′)
+           → Σ ? ?
+           -}
 ```
 # Normal-Form
 
