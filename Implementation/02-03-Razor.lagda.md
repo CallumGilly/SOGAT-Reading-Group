@@ -87,9 +87,6 @@ module Exercise-16 {Ty : Set₁} {Tm : Ty → Set} (r : R Ty Tm) where
 
 ```agda
 module Exercise-17 where 
-  variable
-    Ty : Set
-    Tm : Ty → Set
   open R 
 
   ex17 : ∃₃ λ (Ty : Set₁) (Tm : Ty → Set) (r : R Ty Tm) 
@@ -230,7 +227,15 @@ module Exercise-19 where
 We can then define what a morphism of the Razor language is
 
 ```agda
-module R-Hom (Ty₁ Ty₂ : Set₁) (Tm₁ : Ty₁ → Set) (Tm₂ : Ty₂ → Set) (R₁ : R Ty₁ Tm₁) (R₂ : R Ty₂ Tm₂) where
+module R-Hom 
+    {Ty₁ Ty₂ : Set₁} 
+    {Tm₁ : Ty₁ → Set} 
+    {Tm₂ : Ty₂ → Set} 
+    (R₁ : R Ty₁ Tm₁) 
+    (R₂ : R Ty₂ Tm₂) 
+    (Ty     : Ty₁ → Ty₂)
+    (Tm     : ∀ {A : Ty₁} → Tm₁ A → Tm₂ (Ty A))
+  where
   open R R₁ using () renaming (Bool to Bool₁ ; Nat to Nat₁    ;
                                true to true₁ ; false to false₁;
                                ite  to ite₁  ; num   to num₁  ;
@@ -251,8 +256,6 @@ module R-Hom (Ty₁ Ty₂ : Set₁) (Tm₁ : Ty₁ → Set) (Tm₂ : Ty₂ → S
 
   record R-Hom : Set₁ where
     field
-      Ty     : Ty₁ → Ty₂
-      Tm     : Tm₁ A → Tm₂ (Ty A)
       Bool   : Ty Bool₁           ≡ Bool₂
       Nat    : Ty Nat₁            ≡ Nat₂
       true   : Tm true₁           ≡ subst Tm₂ (sym Bool) true₂
@@ -266,8 +269,8 @@ module R-Hom (Ty₁ Ty₂ : Set₁) (Tm₁ : Ty₁ → Set) (Tm₂ : Ty₂ → S
 # Dependent-Razor
 ```agda
 module _ 
-              (Tyₘ : Set₁) 
-              (Tmₘ : Tyₘ → Set) 
+              {Tyₘ : Set₁}
+              {Tmₘ : Tyₘ → Set}
               (r   : R Tyₘ Tmₘ) 
               (Ty  : Tyₘ → Set) 
               (Tm  : {Aₘ : Tyₘ} → Ty Aₘ → Tmₘ Aₘ → Set) 
@@ -309,12 +312,12 @@ module _
 # Dependent-Morphism
 ```agda
 module _ 
-    (Tyₘ : Set₁) 
-    (Tmₘ : Tyₘ → Set) 
+    {Tyₘ : Set₁}
+    {Tmₘ : Tyₘ → Set}
     (r : R Tyₘ Tmₘ) 
-    (Tyᵈ : Tyₘ → Set)
-    (Tmᵈ : {Aₘ : Tyₘ} → Tyᵈ Aₘ → Tmₘ Aₘ → Set) 
-    (rᵈ  : R-Dep Tyₘ Tmₘ r Tyᵈ Tmᵈ)
+    {Tyᵈ : Tyₘ → Set}
+    {Tmᵈ : {Aₘ : Tyₘ} → Tyᵈ Aₘ → Tmₘ Aₘ → Set}
+    (rᵈ  : R-Dep r Tyᵈ Tmᵈ)
     (Ty  : (Aₘ : Tyₘ) → Tyᵈ Aₘ)
     (Tm  : {Aₘ : Tyₘ} → (uₘ : Tmₘ Aₘ) → (Tmᵈ (Ty Aₘ) uₘ))
   where
@@ -357,43 +360,52 @@ module Syntax
   open R
 
   R-Syn : R Tyₘ Tmₘ → Set₁
-  R-Syn rₘ = ∀ (Tyᵈ : Tyₘ → Set) 
-           → ∀ (Tmᵈ : {Aₘ : Tyₘ} → Tyᵈ Aₘ → Tmₘ Aₘ → Set) 
-           → ∀ (rᵈ : R-Dep Tyₘ Tmₘ rₘ Tyᵈ Tmᵈ) 
-           → Σ ((Aₘ : Tyₘ) → Tyᵈ Aₘ) 
-               (λ Ty → 
-                  Σ ({Aₘ : Tyₘ} → (uₘ : Tmₘ Aₘ) → (Tmᵈ (Ty Aₘ) uₘ)) 
-                    (λ Tm → R-Sec Tyₘ Tmₘ rₘ Tyᵈ Tmᵈ rᵈ Ty Tm)
-              )
+  R-Syn rₘ = ∀ {Tyᵈ : Tyₘ → Set}
+           → ∀ {Tmᵈ : {Aₘ : Tyₘ} → Tyᵈ Aₘ → Tmₘ Aₘ → Set}
+           → ∀ (rᵈ : R-Dep rₘ Tyᵈ Tmᵈ) 
+           → ∃₂ (R-Sec rₘ rᵈ)
 ```
 # Unique
 
 ```agda
-module Unique 
-    (Tyₘ₁ Tyₘ₂ : Set₁)
-    (Tmₘ₁ : Tyₘ₁ → Set)
-    (Tmₘ₂ : Tyₘ₂ → Set)
+module R-Unq 
+    {Tyₘ₁ Tyₘ₂ : Set₁}
+    {Tmₘ₁ : Tyₘ₁ → Set}
+    {Tmₘ₂ : Tyₘ₂ → Set}
+    {r₁ : R Tyₘ₁ Tmₘ₁}
+    {r₂ : R Tyₘ₂ Tmₘ₂} 
   where
-  {-
-  R-Unq : ∀ {r₁ : R Tyₘ₁ Tmₘ₁} {r₂ : R Tyₘ₂ Tmₘ₂} 
-        → ?
-        -}
+  open R-Hom
 
+  R-Unq : {Ty₁ : Tyₘ₁ → Tyₘ₂}
+        → {Tm₁ : ∀ {A : Tyₘ₁} → Tmₘ₁ A → Tmₘ₂ (Ty₁ A)}
+        → R-Hom r₁ r₂ Ty₁ Tm₁
+        → Set₁
+  R-Unq {Ty₁} {Tm₁} r-hom₁ =
+          ∀ {Ty₂ : Tyₘ₁ → Tyₘ₂}
+        → ∀ {Tm₂ : ∀ {A : Tyₘ₁} → Tmₘ₁ A → Tmₘ₂ (Ty₂ A)}
+        → ∀ (r-hom₂ : R-Hom r₁ r₂ Ty₁ Tm₁)
+        → Σ (∀ (x : Tyₘ₁) → Ty₁ x ≡ Ty₂ x) 
+        λ ty₁≡ty₂ → ∀ (x : Tyₘ₁) (y : Tmₘ₁ x) → Tm₁ y ≡ subst Tmₘ₂ (sym (ty₁≡ty₂ x)) (Tm₂ y)
 ```
 
 # Initial-Model
 ```agda
-module Initial 
-    (Tyₘ : Set₁)
-    (Tmₘ : Tyₘ → Set)
+module R-Int 
+    {Tyₘ : Set₁}
+    {Tmₘ : Tyₘ → Set}
   where
-  {-
+  open R-Hom
+  open R-Unq
   R-Int : R Tyₘ Tmₘ → Set₂
-  R-Int rₘ = ∀ (Tyₘ′ : Set₁) 
-           → ∀ (Tmₘ′ : Tyₘ′ → Set)
+  R-Int rₘ = ∀ {Tyₘ′ : Set₁}
+           → ∀ {Tmₘ′ : Tyₘ′ → Set}
            → ∀ (rₘ′  : R Tyₘ′ Tmₘ′)
-           → Σ ? ?
-           -}
+           → ∃₃ λ 
+              (Ty : Tyₘ → Tyₘ′) 
+              (Tm : ∀ {A : Tyₘ} → Tmₘ A → Tmₘ′ (Ty A)) 
+              (r-hom : R-Hom rₘ rₘ′ Ty Tm) 
+            → R-Unq r-hom
 ```
 # Normal-Form
 
