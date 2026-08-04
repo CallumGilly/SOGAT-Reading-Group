@@ -11,6 +11,7 @@ open import Relation.Nullary.Negation using (contradiction)
 open import Data.Empty using (⊥; ⊥-elim)
 open import Data.Unit.Base
 open import Data.Bool.Base
+open import Data.Maybe.Base
 
 
 infixr 6 _⊡_
@@ -387,7 +388,96 @@ module Chapter2-2 where
 
     exercise12-1 {S} syn .ind {n} 0≢sn 0≡ssn = 0≢sn aux where
         DNo = syn DN-pred
+        aux : _
         aux =
             sym (z-eq DNo)
             ⊡ cong (DNo . N) 0≡ssn
             ⊡ s-eq DNo
+
+module Chapter2-3 where
+    record Razor : Set₂ where
+        infixr 6 _+ᵣ_
+        field
+            Ty : Set₁
+            Tm : (A : Ty) → Set
+            Bl : Ty
+            Nt : Ty
+            trueᵣ : Tm Bl
+            falseᵣ : Tm Bl
+            ite : ∀ {A : Ty} → (b : Tm Bl) → (t : Tm A) → (f : Tm A) → Tm A
+            ι : (n : ℕ) → Tm Nt
+            _+ᵣ_ : (u : Tm Nt) → (v : Tm Nt) → Tm Nt
+            isZero : (u : Tm Nt) → Tm Bl
+            iteβ₁ : ∀ {A} {u v : Tm A} → ite trueᵣ u v ≡ u
+            iteβ₂ : ∀ {A} {u v : Tm A} → ite falseᵣ u v ≡ v
+            +β : ∀ {n m} → ι n +ᵣ ι m ≡ ι (n + m)
+            isZeroβ₁ : isZero (ι 0) ≡ trueᵣ
+            isZeroβ₂ : ∀ {n} → isZero (ι (suc n)) ≡ falseᵣ
+
+
+    module Examples (Ra : Razor) where
+        open Razor Ra
+
+        notᵣ : Tm Bl → Tm Bl
+        notᵣ b = ite b falseᵣ trueᵣ
+
+        example1 : notᵣ trueᵣ ≡ falseᵣ
+        example1 = iteβ₁
+
+        example2 : (ι 1 +ᵣ ι 2) +ᵣ (ι 3 +ᵣ ι 4) ≡  ι 10
+        example2 = cong (_+ᵣ (_ +ᵣ _)) +β ⊡ cong (_ +ᵣ_) +β ⊡ +β
+
+    setRa : Razor
+    setRa .Razor.Ty = Set
+    setRa .Razor.Tm A = A
+    setRa .Razor.Bl = Bool
+    setRa .Razor.Nt = ℕ
+    setRa .Razor.trueᵣ = true
+    setRa .Razor.falseᵣ = false
+    setRa .Razor.ite b t f = if b then t else f
+    setRa .Razor.ι n = n
+    setRa .Razor._+ᵣ_ = _+_
+    setRa .Razor.isZero u = u ≡ᵇ 0
+    setRa .Razor.iteβ₁ = refl
+    setRa .Razor.iteβ₂ = refl
+    setRa .Razor.+β = refl
+    setRa .Razor.isZeroβ₁ = refl
+    setRa .Razor.isZeroβ₂ = refl
+
+    trilRa : Razor
+    trilRa .Razor.Ty = Set
+    trilRa .Razor.Tm A = A
+    trilRa .Razor.Bl = Maybe Bool
+    trilRa .Razor.Nt = ℕ
+    trilRa .Razor.trueᵣ = just true
+    trilRa .Razor.falseᵣ = just false
+    trilRa .Razor.ite (just false) t f = f
+    trilRa .Razor.ite (just true) t f = t
+    trilRa .Razor.ite {A} nothing t f = t
+    trilRa .Razor.ι n = n
+    trilRa .Razor._+ᵣ_ = _+_
+    trilRa .Razor.isZero u = just (u ≡ᵇ 0)
+    trilRa .Razor.iteβ₁ = refl
+    trilRa .Razor.iteβ₂ = refl
+    trilRa .Razor.+β = refl
+    trilRa .Razor.isZeroβ₁ = refl
+    trilRa .Razor.isZeroβ₂ = refl
+
+    module Exercises (Ra : Razor) where
+        open Razor Ra
+
+        exercise15 : ∀ {A} {u v : Tm A} → trueᵣ ≡ falseᵣ → u ≡ v
+        exercise15 {A} {u} {v} t=f =
+            sym (iteβ₁ {u = u} {v = v})
+            ⊡ cong (λ x → ite x _ _) t=f
+            ⊡ iteβ₂
+
+        exercise16 : ∀ {A} {u v : Tm A} → ι 0 ≡ ι 1 → u ≡ v
+        exercise16 0=1 = exercise15 t=f where
+            t=f : _
+            t=f = sym isZeroβ₁ ⊡ cong isZero 0=1 ⊡ isZeroβ₂
+
+        -- exercise17 : ∃ λ (x : Razor) → Razor.Tm {!   !} {!   !} ≡ Maybe Bool
+        -- exercise17 = {!   !}
+
+
