@@ -1,6 +1,6 @@
 <!--
 ```agda
-module 02-03-Razor where
+module _ where
 open import Data.Nat
 open import Data.Product
 open import Data.Empty renaming (⊥ to ⊥ᵘ)
