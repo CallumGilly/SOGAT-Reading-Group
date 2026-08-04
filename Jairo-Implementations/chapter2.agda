@@ -12,472 +12,678 @@ open import Data.Empty using (⊥; ⊥-elim)
 open import Data.Unit.Base
 open import Data.Bool.Base
 open import Data.Maybe.Base
-
+open import Function using (_$_)
 
 infixr 6 _⊡_
 _⊡_ = trans
 
+-- Uniqueness of equality proofs
+UIP' = ∀ {a} {A : Set a} → UIP A
+
+-- Some useful lemmas about substitution
+module _ where
+    variable
+        A B : Set
+        a a1 a2 : A
+        b b1 b2 : B
+        P : A → Set
+
+    subst-id :{eq : a1 ≡ a2} → subst (λ _ → B) eq b ≡ b
+    subst-id {eq = refl} = refl
+
+    subst-ref : ∀ {x : P a} {eq : a ≡ a} → subst P eq x ≡ x
+    subst-ref {eq = refl} = refl
+
+    subst-com : {x : P a1} {y : P a2} {eq1 : a1 ≡ a2} {eq2 : a2 ≡ a1}
+        → subst P eq1 x ≡ y → x ≡ subst P eq2 y
+    subst-com {eq1 = refl} {eq2 = refl} refl = refl
+
 module Chapter2-1 where
 
-    -- definition 1 (Monoid)
-    record Monoid : Set₁ where
-        field
-            C : Set
-            prod : ∀ (x y : C) → C
-            ass : ∀ {x y z} →
-                prod x (prod y z) ≡ prod (prod x y) z
-            u : C
-            idl : ∀ {x} → prod u x ≡ x
-            idr : ∀ {x} → prod x u ≡ x
-
+    -- Definition : Monoid
+    module _ (C : Set) where
+        variable x y z : C
+        record Monoid : Set where
+            field
+                _∙_ : (x y : C) → C
+                u : C
+                idl : u ∙ x ≡ x
+                idr : x ∙ u ≡ x
+                ass : x ∙ (y ∙ z) ≡  (x ∙ y) ∙ z
+            infixr 6 _∙_
     open Monoid
 
-    -- Example: Unit monoid
-
-    data Unit' : Set where
-        unit : Unit'
-
-    uM : Monoid
-    uM .C = Unit'
-    uM .prod x y = unit
-    uM .ass {unit} {unit} {unit} = refl
-    uM .u = unit
-    uM .idl {unit} = refl
-    uM .idr {unit} = refl
-
-    -- Morphism
-    record M-Morphism (M N : Monoid) : Set₁ where
+    record M : Set₁ where
         field
-            C : (M .C) → N .C
-            prod-eq : ∀ {x y}
-                →  C (M .prod x y) ≡ N .prod (C x) (C y)
-            u-eq : C (M .u) ≡ N .u
-    open M-Morphism
+            C : Set
+            ι : Monoid C
+    open M
 
-    -- Dependent model
-    record D-Monoid (M : Monoid) : Set₁ where
+    -- Exercise 2.3: The unary monoid
+    -- TODO: finish exercise 2
+    ⊤M : M
+    ⊤M .C = ⊤
+    ⊤M .ι ._∙_ _ _ = tt
+    ⊤M .ι .u = tt
+    ⊤M .ι .idl = refl
+    ⊤M .ι .idr = refl
+    ⊤M .ι .ass = refl
+
+    -- Definition : Monoid Morphism
+    record M-Hom (m n : M) : Set where
+        open Monoid (ι m) renaming (_∙_ to _∙ᵐ_ ; u to uₘ)
+        open Monoid (ι n) renaming (_∙_ to _∙ⁿ_ ; u to uₙ)
         field
-            F : M .C → Set
-            prod : ∀ {m1 m2} → (x : F m1) → (y : F m2) → F (M .prod m1 m2)
-            ass  : ∀ {m1 m2 m3 eqt} {x : F m1} {y : F m2} {z : F m3}
-                → subst F eqt (prod x (prod y z)) ≡ prod (prod x y) z
-            u    : F (M .u)
-            idl  : ∀ {m eqt} {x : F m} → subst F eqt (prod u x) ≡ x
-            idr  : ∀ {m eqt} {x : F m} → subst F eqt (prod x u) ≡ x
-    open D-Monoid
+            C : m .C → n .C
+            u-eq : C uₘ ≡ uₙ
+            ∙-eq : C (x ∙ᵐ y) ≡ C x ∙ⁿ C y
+    open M-Hom
 
-    subst-id : ∀ {A B : Set} {a a' : A} {x : B} {eqt : a ≡ a'}
-            → subst (λ _ → B) eqt x ≡ x
-    subst-id {eqt = refl} = refl
+    -- Some useful Morphims
+    module _ {m : M} where
+        m-id : M-Hom m m
+        m-id .C x = x
+        m-id .u-eq = refl
+        m-id .∙-eq = refl
 
-    subst-ref : ∀ {A : Set} {P : A → Set} {a : A} {x : P a} {eqt : a ≡ a}
-            → subst P eqt x ≡ x
-    subst-ref {A} {P} {a} {x} {refl} = refl
+        m-u : M-Hom m m
+        m-u .C x = ι m .u
+        m-u .u-eq = refl
+        m-u .∙-eq = sym (ι m .idl)
 
-    subst-com : ∀ {A : Set} {P : A → Set} {a a' : A} {x : P a} {y : P a'}
-                {eqt : a ≡ a'} {eqt' : a' ≡ a} → subst P eqt x ≡ y → x ≡ subst P eqt' y
-    subst-com {A} {P} {a} {a'} {x} {y} {refl} {refl} refl = refl
+    -- TODO : Exercise 3
 
-    -- subst-test : ∀ {A : Set} {P : A → Set} {a a' : A} {x : P a} {y : P a'} {eqt : P a ≡ P a'}
-    --          → subst P eqt x ≡ y
-    -- subst-test = ?
+    -- Definition : Dependent Monoid
+    module _ (m : M) (C : m .C → Set) where
+        variable
+            cx : C x
+            cy : C y
+            cz : C z
 
-    -- subst' : ∀ {A : Set} (P : A → Set) {x y : A} → x ≡ y → P x → P y
-    -- subst' P refl px = px
+        record Monoid-Dep : Set₁ where
+            open Monoid (ι m) renaming (_∙_ to _∙ᵐ_; u to uᵐ)
+            field
+                u    : C uᵐ
+                _∙_  : C x → C y → C (x ∙ᵐ y)
+                idl  : ∀ {eq} → subst C eq (u ∙ cx) ≡ cx
+                idr  : ∀ {eq} → subst C eq (cx ∙ u) ≡ cx
+                ass  : ∀ {eq}
+                    → subst C eq (cx ∙ (cy ∙ cz)) ≡ (cx ∙ cy) ∙ cz
+    open Monoid-Dep
 
-    DM-ldi : ∀ {M : Monoid} {DM : D-Monoid M} {m eqt} {x : DM .F m}
-        → DM .prod (DM .u) x ≡ subst (DM .F) eqt x
-    DM-ldi {M} {DM} {m} {eqt} {x} = subst-com {eqt = M .idl} (DM .idl)
-
-    DM-rdi : ∀ {M : Monoid} {DM : D-Monoid M} {m eqt} {x : DM .F m}
-        → DM .prod x (DM .u) ≡ subst (DM .F) eqt x
-    DM-rdi {M} {DM} {m} {eqt} {x} = subst-com {eqt = M .idr} (DM .idr)
-
-    DM-rdiu : ∀ {M eqt} {DM : D-Monoid M}
-            → DM .prod (DM .u) (DM .u) ≡ subst (DM .F) eqt (DM .u)
-    DM-rdiu {M} {eqt} {DM} = DM-rdi {M = M} {DM = DM}
+    record M-Dep (m : M) : Set₁ where
+        field
+            C : m .C → Set
+            ι : Monoid-Dep m C
+    open M-Dep
 
     -- Exercise 4
-    exercise4 : {M' : Monoid} (M : Monoid) → D-Monoid M'
-    exercise4 M .F a = M .C
-    exercise4 M .prod = M .prod
-    exercise4 M .u = M .u
-    exercise4 M .idl {m} {eqt} {x} rewrite (M .idl {x}) = subst-id
-    exercise4 M .idr {m} {eqt} {x} rewrite (M .idr {x}) = subst-id
-    exercise4 M .ass {x = x} {y = y} {z = z}
-        rewrite (M .ass {x = x} {y = y} {z = z})= subst-id
+    module _ {n : M} (m : M) where
+        open Monoid (ι m) renaming (_∙_ to _∙ᵐ_)
 
-    M→DM = exercise4
+        m→d : M-Dep n
+        m→d .C _ = m .C
+        m→d .ι ._∙_ = _∙ᵐ_
+        m→d .ι .u = ι m .u
+        m→d .ι .idl {x} {cx} {eq} rewrite (ι m .idl {cx}) = subst-id
+        m→d .ι .idr {x} {cx} {eq} rewrite (ι m .idr {cx}) = subst-id
+        m→d .ι .ass {x} {cx} {y} {cy} {z} {cz} {eq}
+            rewrite (ι m .ass {x = cx} {y = cy} {z = cz}) = subst-id
 
     -- Exercise 5
-    exercise5-1 : ∀ {M} → D-Monoid M → Monoid
-    exercise5-1 {M'} DM .C = ∃ λ x → DM .F x
-    exercise5-1 {M'} DM .prod (xm , xd) (ym , yd) = M' .prod xm ym , DM .prod xd yd
-    exercise5-1 {M'} DM .u = M' .u , DM .u
-    exercise5-1 {M'} DM .idl = Σ-≡,≡→≡ (M' .idl , DM .idl)
-    exercise5-1 {M'} DM .idr = Σ-≡,≡→≡ (M' .idr , DM .idr)
-    exercise5-1 {M'} DM .ass = Σ-≡,≡→≡ (M' .ass , DM .ass)
+    module _ {m : M} (d : M-Dep m) where
+        open Monoid (ι m) renaming (_∙_ to _∙ᵐ_)
+        open Monoid-Dep (ι d) renaming (_∙_ to _∙ᵈ_)
 
-    DM→∃M = exercise5-1
+        d→∃m : M
+        d→∃m .C = ∃ (λ x → d .C x)
+        d→∃m .ι ._∙_ (x , cx) (y , cy) = (x ∙ᵐ y) , (cx ∙ᵈ cy)
+        d→∃m .ι .u = ι m .u , ι d .u
+        d→∃m .ι .idl = Σ-≡,≡→≡ (ι m .idl , ι d .idl)
+        d→∃m .ι .idr = Σ-≡,≡→≡ (ι m .idr , ι d .idr)
+        d→∃m .ι .ass = Σ-≡,≡→≡ (ι m .ass , ι d .ass)
 
-    exercise5-2 : ∀ {M} → (DM : D-Monoid M) → M-Morphism (exercise5-1 DM) M
-    exercise5-2 {M} DM .C (x , _) = x
-    exercise5-2 {M} DM .prod-eq {x , Fx} {y , Fy} = refl
-    exercise5-2 {M} DM .u-eq = refl
-
-    -- Dependent Morphism
-    record DM-Morphism {M : Monoid} (DM : D-Monoid M) : Set₁ where
+    -- Definition : Dependent Morphism
+    record M-Sec {m : M} (d : M-Dep m) : Set₁ where
+        open Monoid (ι m) renaming (_∙_ to _∙ᵐ_ ; u to uᵐ)
+        open Monoid-Dep (ι d) renaming (_∙_ to _∙ᵈ_ ; u to uᵈ)
         field
-            C : (x : M .C) → (DM .F x)
-            prod-eq : {x y : M .Monoid.C } → C (M .prod x y) ≡ DM .prod (C x) (C y)
-            u-eq : C (M .u) ≡  DM .u
-    open DM-Morphism
+            C : ∀ x → d .C x
+            u-eq : C uᵐ ≡  uᵈ
+            ∙-eq : C (x ∙ᵐ y) ≡ (C x ∙ᵈ C y)
+    open M-Sec
 
-    M-Syntax : (M : Monoid) → Set₁
-    M-Syntax M = ∀ (DM : D-Monoid M) → DM-Morphism DM
+    -- Definition: Syntax
+    M-Syn : M → Set₁
+    M-Syn m = (d : M-Dep m) → M-Sec d
 
     -- Exercise 6
-    exercise6 : ∃ λ M → M-Syntax M
-    exercise6 .proj₁ = uM
-    exercise6 .proj₂ DM .C unit = DM .u
-    exercise6 .proj₂ DM .prod-eq {unit} {unit} = sym (DM .idl)
-    exercise6 .proj₂ DM .u-eq = refl
+    ∃-M-Syn : ∃ λ m → M-Syn m
+    ∃-M-Syn .proj₁ = ⊤M
+    ∃-M-Syn .proj₂ d .C tt = ι d .u
+    ∃-M-Syn .proj₂ d .u-eq = refl
+    ∃-M-Syn .proj₂ d .∙-eq {tt} {tt} = sym (ι d .idl)
 
-    uM-Syntax = proj₂ exercise6
+    ⊤M-Syn = proj₂ ∃-M-Syn
 
-    M-Initial : (M : Monoid) → Set₁
-    M-Initial M = (M' : Monoid) →
-                    M-Morphism M M' × (∀ (Mo Mo' : M-Morphism M M') x
-                        → (Mo .C x) ≡ Mo' .C x)
-
-    Mo-id : ∀ {M} → M-Morphism M M
-    Mo-id .C x = x
-    Mo-id .prod-eq = refl
-    Mo-id .u-eq = refl
-
-    Mo-u : ∀ {M} → M-Morphism M M
-    Mo-u {M} .C _ = M .u
-    Mo-u {M} .prod-eq = sym (M .idl)
-    Mo-u {M} .u-eq = refl
-
-    I-is-u : ∀ {I} → M-Initial I → (x : I .C) → x ≡ I .u
-    I-is-u {I} I→IoxU = let I→U M' = proj₂ (I→IoxU M') in I→U I Mo-id Mo-u
-
-    -- Uniqueness of equality proofs
-    UIP' = ∀ {a} {A : Set a} → UIP A
+    -- Definition: Initial
+    M-Ini : M → Set₁
+    M-Ini m =
+        (n : M) → (M-Hom m n × (∀ (mh nh : M-Hom m n) x → mh .C x ≡ nh .C x))
 
     -- Exercise 7
-    exercise7-1 : UIP' → (M : Monoid) → M-Syntax M → M-Initial M
-    exercise7-1 _ M DM→DMo M' .proj₁ = G where
-        DM : D-Monoid M
-        DM = exercise4 M'
+    module _ (uip : UIP') (m : M) where
+        variable
+            n : M
 
-        DMo : DM-Morphism DM
-        DMo = DM→DMo DM
+        m-syn→nh : (M-Syn m) → M-Hom m n
+        m-syn→nh {n} md→s = let s = md→s $ m→d n in record {
+                C = s .C
+                ; u-eq = s .u-eq
+                ; ∙-eq = s .∙-eq}
 
-        G : M-Morphism M M'
-        G .C = DMo .C
-        G .prod-eq = DMo .prod-eq
-        G .u-eq = DMo .u-eq
-    exercise7-1 uip M DM→DMo M' .proj₂ Mo Mo' x = G where
-        P : M .C → Set
-        P x = Mo .C x ≡ Mo' .C x
+        m-syn→nh-uniq : (M-Syn m) → ∀ (mh nh : M-Hom m n) x → mh .C x ≡ nh .C x
+        m-syn→nh-uniq {n} md→s mh nh = (md→s d) .C where
+            d : M-Dep m
+            d .C y = mh .C y ≡ nh .C y
+            d .ι .u = (mh .u-eq) ⊡ sym (nh .u-eq)
+            d .ι ._∙_ cx cy =
+                mh .∙-eq ⊡ cong₂ (ι n ._∙_) cx cy ⊡ sym (nh .∙-eq)
+            d .ι .idl = uip _ _
+            d .ι .idr = uip _ _
+            d .ι .ass = uip _ _
 
-        DM : D-Monoid M
-        DM .F x = P x
-        DM .prod {m1} {m2} x y =
-            Mo .prod-eq ⊡ cong (λ e → M' .prod e _) x
-            ⊡ cong (λ e →  M' .prod _ e) y ⊡ sym (Mo' .prod-eq)
-        DM .u = Mo .u-eq ⊡ sym (Mo' .u-eq)
-        DM .idl {m} {x} = uip _ _
-        DM .idr = uip _ _
-        DM .ass {m1} {m2} {m3} {x} {y} {z} = uip _ _
+        m-syn→ini : (M-Syn m) → (M-Ini m)
+        m-syn→ini md→s n = m-syn→nh md→s , m-syn→nh-uniq md→s
 
-        DMo : DM-Morphism DM
-        DMo = DM→DMo DM
+        m-ini-u : ∀ {m} → M-Ini m → (x : m .C) → x ≡ ι m .u
+        m-ini-u {m} m→nh-uniq = proj₂ (m→nh-uniq m) m-id m-u
 
-        G = DMo .C x
+        md-idu : ∀ {eq} {d : M-Dep m}
+            → ι d ._∙_ (ι d .u) (ι d .u) ≡ subst (d .C) eq (ι d .u)
+        md-idu {eq} {d} = subst-com {eq1 = ι m .idl} (ι d .idr)
 
-    M-Syntax→Initial = exercise7-1
-
-    uM-Initial : UIP' → M-Initial uM
-    uM-Initial uip M' = exercise7-1 uip uM (proj₂ exercise6) M'
-
-    -- No UIP!
-    exercise7-2 : (M : Monoid) → M-Initial M → M-Syntax M
-    exercise7-2 I I→IoxU DI = DMo where
-        M : Monoid
-        M = exercise5-1 DI
-
-        DMo : DM-Morphism DI
-        DMo .C x = subst (DI .F) (sym (I-is-u I→IoxU x)) (DI .u)
-        DMo .prod-eq {x} {y} with (I-is-u I→IoxU x) | (I-is-u I→IoxU y)
-        ... | refl | refl = sym (DM-rdiu {DM = DI})
-        DMo .u-eq = subst-ref
-
-    M-Intial→Syntax = exercise7-2
-
-    exercise8-1 : {M : Monoid} → M-Morphism M M
-    exercise8-1 = Mo-id
-
-    exercise8-2 : ∀ {M1 M2 M3} (Mo : M-Morphism M1 M2) (Mo : M-Morphism M2 M3)
-        → M-Morphism M1 M3
-    exercise8-2 {M1} {M2} {M3} Mo Mo' .C x = Mo' .C (Mo .C x)
-    exercise8-2 {M1} {M2} {M3} Mo Mo' .prod-eq {x} {y}
-        rewrite (Mo .prod-eq {x} {y}) = Mo' .prod-eq
-    exercise8-2 {M1} {M2} {M3} Mo Mo' .u-eq rewrite (Mo .u-eq) = Mo' .u-eq
-
-    Mo-comp : ∀ {M1 M2 M3} (Mo : M-Morphism M1 M2) (Mo : M-Morphism M2 M3)
-        → M-Morphism M1 M3
-    Mo-comp = exercise8-2
-
-    Mo-Iso : {M N : Monoid} (Mo : M-Morphism M N) (Mo' : M-Morphism N M) → Set
-    Mo-Iso {M} {N} Mo Mo' = ∀ x → Mo-comp Mo Mo' .C x ≡  Mo-id {M} .C x
-
-    M-Iso : (M N : Monoid) → Set₁
-    M-Iso M N = ∃ λ (Mo : M-Morphism M N)
-        → ∃ (λ (Mo' : M-Morphism N M) → Mo-Iso Mo Mo')
-
-    exercise8-3 : UIP' → ∀ (M N : Monoid) → M-Syntax M → M-Syntax N → M-Iso M N
-    exercise8-3 uip M N DM→DMo DN→DNo = Mo , (Mo' , G) where
-        M→MoxU = M-Syntax→Initial uip M DM→DMo
-
-        N→NoxU = M-Syntax→Initial uip N DN→DNo
-
-        Mo : M-Morphism M N
-        Mo = proj₁ (M→MoxU N)
-
-        Mo' : M-Morphism N M
-        Mo' = proj₁ (N→NoxU M)
-
-        G : ∀ x → _
-        G x = I-is-u
-            M→MoxU (Mo-comp Mo Mo' .C x) ⊡ sym (I-is-u M→MoxU (Mo-id {M} .C x))
-
-    M-Inv : ∀ {M : Monoid} (x x^-1 : M .C) → Set
-    M-Inv {M} x x^-1 = M .prod x x^-1 ≡ M .u × M .prod x^-1 x ≡ M .u
-
-    prod-inv : ∀ {M : Monoid} {x1 x2 x1^-1 x2^-1 : M .C}
-            → M-Inv {M} x1 x1^-1 → M-Inv {M} x2 x2^-1
-            → M-Inv {M} (M .prod x1 x2) (M .prod x2^-1 x1^-1)
-    prod-inv {M} {x1} {x2} {x1^-1} {x2^-1} (l1 , r1) (l2 , r2) .proj₁
-        rewrite M .ass {M .prod x1 x2} {x2^-1} {x1^-1}
-            | sym (M .ass {x1} {x2} {x2^-1}) | l2 | M .idr {x1} = l1
-    prod-inv {M} {x1} {x2} {x1^-1} {x2^-1} (l1 , r1) (l2 , r2) .proj₂
-        rewrite M .ass {M .prod x2^-1 x1^-1} {x1} {x2}
-            | sym (M .ass {x2^-1} {x1^-1} {x1}) | r1 | M .idr {x2^-1} = r2
-
-    inv-uniq : ∀ {M : Monoid} {x x^-1 y^-1 : M .C}
-            → M-Inv {M} x x^-1 → M-Inv {M} x y^-1 → x^-1 ≡ y^-1
-    inv-uniq {M} {x} {x^-1} {y^-1} (l1 , r1) (l2 , r2) =
-        sym (M .idl {x^-1}) ⊡ cong (λ y → M .prod y x^-1) (sym r2)
-        ⊡ sym (M .ass) ⊡ cong (λ y → M .prod y^-1 y) l1 ⊡ M .idr
-
-    ∃inv-uniq : UIP' → ∀ {M} {x : M .C} {ex^-1 ey^-1 : ∃ (M-Inv {M} x)}
-        →  ex^-1 ≡ ey^-1
-    ∃inv-uniq uip {M} {x} {_ , invx} {_ , invy} =
-        Σ-≡,≡→≡ (inv-uniq {M} invx invy , Σ-≡,≡→≡ (uip _ _ , uip _ _))
-
-    DM-group : UIP' → ∀ {M} → D-Monoid M
-    DM-group uip {M} .F x = ∃ (λ x^-1 → M-Inv {M} x x^-1)
-    DM-group uip {M} .prod {x} {y} (x^-1 , invx) (y^-1 , invy) =
-        M .prod y^-1 x^-1 , prod-inv {M = M} invx invy
-    DM-group uip {M} .u .proj₁ = M .u
-    DM-group uip {M} .u .proj₂ = M .idl , M .idl
-    DM-group uip {M} .idl {eqt = eqt} = ∃inv-uniq uip {M}
-    DM-group uip {M} .idr {eqt = eqt} = ∃inv-uniq uip {M}
-    DM-group uip {M} .ass {eqt = eqt} = ∃inv-uniq uip {M}
-
-    exercise9 : UIP' → ∀ {M} (x) → (M-Syntax M) → (∃ λ x^-1 → M-Inv {M} x x^-1)
-    exercise9 uip x DM→DMo = let DMo-gp = DM→DMo (DM-group uip) in DMo-gp .C x
+        m-ini→syn :  (M-Ini m) → (M-Syn m)
+        m-ini→syn m→nh-uniq d = s where
+            s : M-Sec d
+            s .C x = subst (d .C) (sym (m-ini-u m→nh-uniq x)) (ι d .u)
+            s .u-eq = subst-ref
+            s .∙-eq {x} {y} with (m-ini-u m→nh-uniq x) | (m-ini-u m→nh-uniq y)
+            ... | refl | refl = sym $ md-idu {d = d}
 
 
-module Chapter2-2 where
 
-    -- Pointed set with endofunction
-    record PSE : Set₁ where
-        field
-            N : Set
-            z : N
-            s : N → N
-    open PSE
+    -- TODO: Exercise 8
 
-    record D-PSE (S : PSE) : Set₁ where
-        field
-            P : (S .N) → Set
-            base : P (S .z)
-            ind : ∀ {n} → P n → P (S .s n)
-    open D-PSE
+    -- TODO: Exercise 9
 
-    record DPSE-Morphism {S : PSE} (DS : D-PSE S) : Set₁ where
-        field
-            N : (n : S .N) → (DS .P n)
-            z-eq : N (S .z) ≡ DS .base
-            s-eq : ∀ {n} → N (S .s n) ≡  DS .ind (N n)
-    open DPSE-Morphism
+    -- record M-Hom {Cₘ Cₙ : Set} (m : M Cₘ) (n : M Cₙ) : Set where
+    --     open M m renaming (_∙_ to _∙ᵐ_) hiding (C)
+    --     open M n renaming (_∙_ to _∙ⁿ_) hiding (C)
+    --     field
+    --         C : Cₘ → Cₙ
+    --         _∙_ : C (x ∙ᵐ y) ≡  (C x) ∙ⁿ (C y)
+    --         u : C (m .u) ≡ n .u
 
-    PSE-Syntax : (S : PSE) → Set₁
-    PSE-Syntax S = (DS : D-PSE S) → DPSE-Morphism DS
+--     -- definition 1 (Monoid)
+--     record Monoid : Set₁ where
+--         field
+--             C : Set
+--             prod : ∀ (x y : C) → C
+--             ass : ∀ {x y z} →
+--                 prod x (prod y z) ≡ prod (prod x y) z
+--             u : C
+--             idl : ∀ {x} → prod u x ≡ x
+--             idr : ∀ {x} → prod x u ≡ x
 
-    natN : PSE
-    natN .N = ℕ
-    natN .z = zero
-    natN .s = suc
+--     open Monoid
 
-    natN-syn : PSE-Syntax natN
-    natN-syn DS .N zero = DS .base
-    natN-syn DS .N (suc n) = DS .ind (natN-syn DS .N n)
-    natN-syn DS .z-eq = refl
-    natN-syn DS .s-eq = refl
+--     -- Example: Unit monoid
 
-    Elim : Set₁
-    Elim = (P : ℕ → Set) → P zero → (∀ {n} → P n → P (suc n)) → (∀ n → P n)
+--     data Unit' : Set where
+--         unit : Unit'
 
-    elim : Elim
-    elim P base ind zero = base
-    elim P base ind (suc n) = ind (elim P base ind n)
+--     uM : Monoid
+--     uM .C = Unit'
+--     uM .prod x y = unit
+--     uM .ass {unit} {unit} {unit} = refl
+--     uM .u = unit
+--     uM .idl {unit} = refl
+--     uM .idr {unit} = refl
 
-    e-nadd : ℕ → ℕ → ℕ
-    e-nadd n m = elim (λ _ → ℕ) n (λ m → suc m) m
+--     -- Morphism
+--     record M-Morphism (M N : Monoid) : Set₁ where
+--         field
+--             C : (M .C) → N .C
+--             prod-eq : ∀ {x y}
+--                 →  C (M .prod x y) ≡ N .prod (C x) (C y)
+--             u-eq : C (M .u) ≡ N .u
+--     open M-Morphism
 
-    DN-add : ∀ {S} → D-PSE S
-    DN-add {S} .P _ =  S .N → S .N
-    DN-add {S} .base n = n
-    DN-add {S} .ind {n} f m = S .s (f m)
+--     -- Dependent model
+--     record D-Monoid (M : Monoid) : Set₁ where
+--         field
+--             F : M .C → Set
+--             prod : ∀ {m1 m2} → (x : F m1) → (y : F m2) → F (M .prod m1 m2)
+--             ass  : ∀ {m1 m2 m3 eqt} {x : F m1} {y : F m2} {z : F m3}
+--                 → subst F eqt (prod x (prod y z)) ≡ prod (prod x y) z
+--             u    : F (M .u)
+--             idl  : ∀ {m eqt} {x : F m} → subst F eqt (prod u x) ≡ x
+--             idr  : ∀ {m eqt} {x : F m} → subst F eqt (prod x u) ≡ x
+--     open D-Monoid
 
-    s-add : ∀ {S} → (PSE-Syntax S) → S .N → S .N → S .N
-    s-add {S} dm→dmo = (dm→dmo DN-add) .N
+--     subst-id : ∀ {A B : Set} {a a' : A} {x : B} {eqt : a ≡ a'}
+--             → subst (λ _ → B) eqt x ≡ x
+--     subst-id {eqt = refl} = refl
 
-    s-nadd = s-add natN-syn
+--     subst-ref : ∀ {A : Set} {P : A → Set} {a : A} {x : P a} {eqt : a ≡ a}
+--             → subst P eqt x ≡ x
+--     subst-ref {A} {P} {a} {x} {refl} = refl
 
-    DN-add-idr : ∀ {S} → PSE-Syntax S → D-PSE S
-    DN-add-idr {S} dm→dmo = let s-add' = s-add dm→dmo in record {
-        P = λ x → s-add' x (S .z) ≡ x ;
-        base = cong (λ a → a (S .z)) (z-eq (dm→dmo DN-add)) ;
-        ind = λ {n} p →
-            cong (λ x → x (S .z)) (s-eq (dm→dmo DN-add))
-            ⊡ cong (λ x → S .s x) p}
+--     subst-com : ∀ {A : Set} {P : A → Set} {a a' : A} {x : P a} {y : P a'}
+--                 {eqt : a ≡ a'} {eqt' : a' ≡ a} → subst P eqt x ≡ y → x ≡ subst P eqt' y
+--     subst-com {A} {P} {a} {a'} {x} {y} {refl} {refl} refl = refl
 
-    0≢1 : (0 ≡ 1) → ⊥
-    0≢1 0≡1 = subst aux 0≡1 tt where
-        aux : _
-        aux zero = ⊤
-        aux (suc n) = ⊥
+--     -- subst-test : ∀ {A : Set} {P : A → Set} {a a' : A} {x : P a} {y : P a'} {eqt : P a ≡ P a'}
+--     --          → subst P eqt x ≡ y
+--     -- subst-test = ?
 
-    zesu : ∀ (n : ℕ) → 0 ≡ suc n → ⊥
-    zesu = elim _ 0≢1 λ {n} 0≢1+n 0≡2+n → 0≢1+n (cong pred 0≡2+n)
+--     -- subst' : ∀ {A : Set} (P : A → Set) {x y : A} → x ≡ y → P x → P y
+--     -- subst' P refl px = px
 
-    DN-auxb : ∀ {S} → D-PSE S
-    DN-auxb {S} .P _ = Bool
-    DN-auxb {S} .base = false
-    DN-auxb {S} .ind = λ _ → true
+--     DM-ldi : ∀ {M : Monoid} {DM : D-Monoid M} {m eqt} {x : DM .F m}
+--         → DM .prod (DM .u) x ≡ subst (DM .F) eqt x
+--     DM-ldi {M} {DM} {m} {eqt} {x} = subst-com {eqt = M .idl} (DM .idl)
 
-    DN-pred : ∀ {S} → D-PSE S
-    DN-pred {S} .P _ = S .N
-    DN-pred {S} .base = S .z
-    DN-pred {S} .ind {n} _ = n
+--     DM-rdi : ∀ {M : Monoid} {DM : D-Monoid M} {m eqt} {x : DM .F m}
+--         → DM .prod x (DM .u) ≡ subst (DM .F) eqt x
+--     DM-rdi {M} {DM} {m} {eqt} {x} = subst-com {eqt = M .idr} (DM .idr)
 
-    exercise12-1 : ∀ {S} → PSE-Syntax S → D-PSE S
-    exercise12-1 {S} syn .P x = (S .z ≡ S .s x) → ⊥
-    exercise12-1 {S} syn .base z≡sz = subst T aux tt where
-        aux : true ≡ false
-        aux =
-            sym (s-eq (syn _))
-            ⊡ sym (sym (z-eq (syn _))
-            ⊡ (cong ((syn DN-auxb) .N) z≡sz))
+--     DM-rdiu : ∀ {M eqt} {DM : D-Monoid M}
+--             → DM .prod (DM .u) (DM .u) ≡ subst (DM .F) eqt (DM .u)
+--     DM-rdiu {M} {eqt} {DM} = DM-rdi {M = M} {DM = DM}
 
-    exercise12-1 {S} syn .ind {n} 0≢sn 0≡ssn = 0≢sn aux where
-        DNo = syn DN-pred
-        aux : _
-        aux =
-            sym (z-eq DNo)
-            ⊡ cong (DNo . N) 0≡ssn
-            ⊡ s-eq DNo
+--     -- Exercise 4
+--     exercise4 : {M' : Monoid} (M : Monoid) → D-Monoid M'
+--     exercise4 M .F a = M .C
+--     exercise4 M .prod = M .prod
+--     exercise4 M .u = M .u
+--     exercise4 M .idl {m} {eqt} {x} rewrite (M .idl {x}) = subst-id
+--     exercise4 M .idr {m} {eqt} {x} rewrite (M .idr {x}) = subst-id
+--     exercise4 M .ass {x = x} {y = y} {z = z}
+--         rewrite (M .ass {x = x} {y = y} {z = z})= subst-id
 
-module Chapter2-3 where
-    record Razor : Set₂ where
-        infixr 6 _+ᵣ_
-        field
-            Ty : Set₁
-            Tm : (A : Ty) → Set
-            Bl : Ty
-            Nt : Ty
-            trueᵣ : Tm Bl
-            falseᵣ : Tm Bl
-            ite : ∀ {A : Ty} → (b : Tm Bl) → (t : Tm A) → (f : Tm A) → Tm A
-            ι : (n : ℕ) → Tm Nt
-            _+ᵣ_ : (u : Tm Nt) → (v : Tm Nt) → Tm Nt
-            isZero : (u : Tm Nt) → Tm Bl
-            iteβ₁ : ∀ {A} {u v : Tm A} → ite trueᵣ u v ≡ u
-            iteβ₂ : ∀ {A} {u v : Tm A} → ite falseᵣ u v ≡ v
-            +β : ∀ {n m} → ι n +ᵣ ι m ≡ ι (n + m)
-            isZeroβ₁ : isZero (ι 0) ≡ trueᵣ
-            isZeroβ₂ : ∀ {n} → isZero (ι (suc n)) ≡ falseᵣ
+--     M→DM = exercise4
+
+--     -- Exercise 5
+--     exercise5-1 : ∀ {M} → D-Monoid M → Monoid
+--     exercise5-1 {M'} DM .C = ∃ λ x → DM .F x
+--     exercise5-1 {M'} DM .prod (xm , xd) (ym , yd) = M' .prod xm ym , DM .prod xd yd
+--     exercise5-1 {M'} DM .u = M' .u , DM .u
+--     exercise5-1 {M'} DM .idl = Σ-≡,≡→≡ (M' .idl , DM .idl)
+--     exercise5-1 {M'} DM .idr = Σ-≡,≡→≡ (M' .idr , DM .idr)
+--     exercise5-1 {M'} DM .ass = Σ-≡,≡→≡ (M' .ass , DM .ass)
+
+--     DM→∃M = exercise5-1
+
+--     exercise5-2 : ∀ {M} → (DM : D-Monoid M) → M-Morphism (exercise5-1 DM) M
+--     exercise5-2 {M} DM .C (x , _) = x
+--     exercise5-2 {M} DM .prod-eq {x , Fx} {y , Fy} = refl
+--     exercise5-2 {M} DM .u-eq = refl
+
+--     -- Dependent Morphism
+--     record DM-Morphism {M : Monoid} (DM : D-Monoid M) : Set₁ where
+--         field
+--             C : (x : M .C) → (DM .F x)
+--             prod-eq : {x y : M .Monoid.C } → C (M .prod x y) ≡ DM .prod (C x) (C y)
+--             u-eq : C (M .u) ≡  DM .u
+--     open DM-Morphism
+
+--     M-Syntax : (M : Monoid) → Set₁
+--     M-Syntax M = ∀ (DM : D-Monoid M) → DM-Morphism DM
+
+--     -- Exercise 6
+--     exercise6 : ∃ λ M → M-Syntax M
+--     exercise6 .proj₁ = uM
+--     exercise6 .proj₂ DM .C unit = DM .u
+--     exercise6 .proj₂ DM .prod-eq {unit} {unit} = sym (DM .idl)
+--     exercise6 .proj₂ DM .u-eq = refl
+
+--     uM-Syntax = proj₂ exercise6
+
+--     M-Initial : (M : Monoid) → Set₁
+--     M-Initial M = (M' : Monoid) →
+--                     M-Morphism M M' × (∀ (Mo Mo' : M-Morphism M M') x
+--                         → (Mo .C x) ≡ Mo' .C x)
+
+--     Mo-id : ∀ {M} → M-Morphism M M
+--     Mo-id .C x = x
+--     Mo-id .prod-eq = refl
+--     Mo-id .u-eq = refl
+
+--     Mo-u : ∀ {M} → M-Morphism M M
+--     Mo-u {M} .C _ = M .u
+--     Mo-u {M} .prod-eq = sym (M .idl)
+--     Mo-u {M} .u-eq = refl
+
+--     I-is-u : ∀ {I} → M-Initial I → (x : I .C) → x ≡ I .u
+--     I-is-u {I} I→IoxU = let I→U M' = proj₂ (I→IoxU M') in I→U I Mo-id Mo-u
+
+--     -- Uniqueness of equality proofs
+--     UIP' = ∀ {a} {A : Set a} → UIP A
+
+--     -- Exercise 7
+--     exercise7-1 : UIP' → (M : Monoid) → M-Syntax M → M-Initial M
+--     exercise7-1 _ M DM→DMo M' .proj₁ = G where
+--         DM : D-Monoid M
+--         DM = exercise4 M'
+
+--         DMo : DM-Morphism DM
+--         DMo = DM→DMo DM
+
+--         G : M-Morphism M M'
+--         G .C = DMo .C
+--         G .prod-eq = DMo .prod-eq
+--         G .u-eq = DMo .u-eq
+--     exercise7-1 uip M DM→DMo M' .proj₂ Mo Mo' x = G where
+--         P : M .C → Set
+--         P x = Mo .C x ≡ Mo' .C x
+
+--         DM : D-Monoid M
+--         DM .F x = P x
+--         DM .prod {m1} {m2} x y =
+--             Mo .prod-eq ⊡ cong (λ e → M' .prod e _) x
+--             ⊡ cong (λ e →  M' .prod _ e) y ⊡ sym (Mo' .prod-eq)
+--         DM .u = Mo .u-eq ⊡ sym (Mo' .u-eq)
+--         DM .idl {m} {x} = uip _ _
+--         DM .idr = uip _ _
+--         DM .ass {m1} {m2} {m3} {x} {y} {z} = uip _ _
+
+--         DMo : DM-Morphism DM
+--         DMo = DM→DMo DM
+
+--         G = DMo .C x
+
+--     M-Syntax→Initial = exercise7-1
+
+--     uM-Initial : UIP' → M-Initial uM
+--     uM-Initial uip M' = exercise7-1 uip uM (proj₂ exercise6) M'
+
+--     -- No UIP!
+--     exercise7-2 : (M : Monoid) → M-Initial M → M-Syntax M
+--     exercise7-2 I I→IoxU DI = DMo where
+--         M : Monoid
+--         M = exercise5-1 DI
+
+--         DMo : DM-Morphism DI
+--         DMo .C x = subst (DI .F) (sym (I-is-u I→IoxU x)) (DI .u)
+--         DMo .prod-eq {x} {y} with (I-is-u I→IoxU x) | (I-is-u I→IoxU y)
+--         ... | refl | refl = sym (DM-rdiu {DM = DI})
+--         DMo .u-eq = subst-ref
+
+--     M-Intial→Syntax = exercise7-2
+
+--     exercise8-1 : {M : Monoid} → M-Morphism M M
+--     exercise8-1 = Mo-id
+
+--     exercise8-2 : ∀ {M1 M2 M3} (Mo : M-Morphism M1 M2) (Mo : M-Morphism M2 M3)
+--         → M-Morphism M1 M3
+--     exercise8-2 {M1} {M2} {M3} Mo Mo' .C x = Mo' .C (Mo .C x)
+--     exercise8-2 {M1} {M2} {M3} Mo Mo' .prod-eq {x} {y}
+--         rewrite (Mo .prod-eq {x} {y}) = Mo' .prod-eq
+--     exercise8-2 {M1} {M2} {M3} Mo Mo' .u-eq rewrite (Mo .u-eq) = Mo' .u-eq
+
+--     Mo-comp : ∀ {M1 M2 M3} (Mo : M-Morphism M1 M2) (Mo : M-Morphism M2 M3)
+--         → M-Morphism M1 M3
+--     Mo-comp = exercise8-2
+
+--     Mo-Iso : {M N : Monoid} (Mo : M-Morphism M N) (Mo' : M-Morphism N M) → Set
+--     Mo-Iso {M} {N} Mo Mo' = ∀ x → Mo-comp Mo Mo' .C x ≡  Mo-id {M} .C x
+
+--     M-Iso : (M N : Monoid) → Set₁
+--     M-Iso M N = ∃ λ (Mo : M-Morphism M N)
+--         → ∃ (λ (Mo' : M-Morphism N M) → Mo-Iso Mo Mo')
+
+--     exercise8-3 : UIP' → ∀ (M N : Monoid) → M-Syntax M → M-Syntax N → M-Iso M N
+--     exercise8-3 uip M N DM→DMo DN→DNo = Mo , (Mo' , G) where
+--         M→MoxU = M-Syntax→Initial uip M DM→DMo
+
+--         N→NoxU = M-Syntax→Initial uip N DN→DNo
+
+--         Mo : M-Morphism M N
+--         Mo = proj₁ (M→MoxU N)
+
+--         Mo' : M-Morphism N M
+--         Mo' = proj₁ (N→NoxU M)
+
+--         G : ∀ x → _
+--         G x = I-is-u
+--             M→MoxU (Mo-comp Mo Mo' .C x) ⊡ sym (I-is-u M→MoxU (Mo-id {M} .C x))
+
+--     M-Inv : ∀ {M : Monoid} (x x^-1 : M .C) → Set
+--     M-Inv {M} x x^-1 = M .prod x x^-1 ≡ M .u × M .prod x^-1 x ≡ M .u
+
+--     prod-inv : ∀ {M : Monoid} {x1 x2 x1^-1 x2^-1 : M .C}
+--             → M-Inv {M} x1 x1^-1 → M-Inv {M} x2 x2^-1
+--             → M-Inv {M} (M .prod x1 x2) (M .prod x2^-1 x1^-1)
+--     prod-inv {M} {x1} {x2} {x1^-1} {x2^-1} (l1 , r1) (l2 , r2) .proj₁
+--         rewrite M .ass {M .prod x1 x2} {x2^-1} {x1^-1}
+--             | sym (M .ass {x1} {x2} {x2^-1}) | l2 | M .idr {x1} = l1
+--     prod-inv {M} {x1} {x2} {x1^-1} {x2^-1} (l1 , r1) (l2 , r2) .proj₂
+--         rewrite M .ass {M .prod x2^-1 x1^-1} {x1} {x2}
+--             | sym (M .ass {x2^-1} {x1^-1} {x1}) | r1 | M .idr {x2^-1} = r2
+
+--     inv-uniq : ∀ {M : Monoid} {x x^-1 y^-1 : M .C}
+--             → M-Inv {M} x x^-1 → M-Inv {M} x y^-1 → x^-1 ≡ y^-1
+--     inv-uniq {M} {x} {x^-1} {y^-1} (l1 , r1) (l2 , r2) =
+--         sym (M .idl {x^-1}) ⊡ cong (λ y → M .prod y x^-1) (sym r2)
+--         ⊡ sym (M .ass) ⊡ cong (λ y → M .prod y^-1 y) l1 ⊡ M .idr
+
+--     ∃inv-uniq : UIP' → ∀ {M} {x : M .C} {ex^-1 ey^-1 : ∃ (M-Inv {M} x)}
+--         →  ex^-1 ≡ ey^-1
+--     ∃inv-uniq uip {M} {x} {_ , invx} {_ , invy} =
+--         Σ-≡,≡→≡ (inv-uniq {M} invx invy , Σ-≡,≡→≡ (uip _ _ , uip _ _))
+
+--     DM-group : UIP' → ∀ {M} → D-Monoid M
+--     DM-group uip {M} .F x = ∃ (λ x^-1 → M-Inv {M} x x^-1)
+--     DM-group uip {M} .prod {x} {y} (x^-1 , invx) (y^-1 , invy) =
+--         M .prod y^-1 x^-1 , prod-inv {M = M} invx invy
+--     DM-group uip {M} .u .proj₁ = M .u
+--     DM-group uip {M} .u .proj₂ = M .idl , M .idl
+--     DM-group uip {M} .idl {eqt = eqt} = ∃inv-uniq uip {M}
+--     DM-group uip {M} .idr {eqt = eqt} = ∃inv-uniq uip {M}
+--     DM-group uip {M} .ass {eqt = eqt} = ∃inv-uniq uip {M}
+
+--     exercise9 : UIP' → ∀ {M} (x) → (M-Syntax M) → (∃ λ x^-1 → M-Inv {M} x x^-1)
+--     exercise9 uip x DM→DMo = let DMo-gp = DM→DMo (DM-group uip) in DMo-gp .C x
 
 
-    module Examples (Ra : Razor) where
-        open Razor Ra
+-- module Chapter2-2 where
 
-        notᵣ : Tm Bl → Tm Bl
-        notᵣ b = ite b falseᵣ trueᵣ
+--     -- Pointed set with endofunction
+--     record PSE : Set₁ where
+--         field
+--             N : Set
+--             z : N
+--             s : N → N
+--     open PSE
 
-        example1 : notᵣ trueᵣ ≡ falseᵣ
-        example1 = iteβ₁
+--     record D-PSE (S : PSE) : Set₁ where
+--         field
+--             P : (S .N) → Set
+--             base : P (S .z)
+--             ind : ∀ {n} → P n → P (S .s n)
+--     open D-PSE
 
-        example2 : (ι 1 +ᵣ ι 2) +ᵣ (ι 3 +ᵣ ι 4) ≡  ι 10
-        example2 = cong (_+ᵣ (_ +ᵣ _)) +β ⊡ cong (_ +ᵣ_) +β ⊡ +β
+--     record DPSE-Morphism {S : PSE} (DS : D-PSE S) : Set₁ where
+--         field
+--             N : (n : S .N) → (DS .P n)
+--             z-eq : N (S .z) ≡ DS .base
+--             s-eq : ∀ {n} → N (S .s n) ≡  DS .ind (N n)
+--     open DPSE-Morphism
 
-    setRa : Razor
-    setRa .Razor.Ty = Set
-    setRa .Razor.Tm A = A
-    setRa .Razor.Bl = Bool
-    setRa .Razor.Nt = ℕ
-    setRa .Razor.trueᵣ = true
-    setRa .Razor.falseᵣ = false
-    setRa .Razor.ite b t f = if b then t else f
-    setRa .Razor.ι n = n
-    setRa .Razor._+ᵣ_ = _+_
-    setRa .Razor.isZero u = u ≡ᵇ 0
-    setRa .Razor.iteβ₁ = refl
-    setRa .Razor.iteβ₂ = refl
-    setRa .Razor.+β = refl
-    setRa .Razor.isZeroβ₁ = refl
-    setRa .Razor.isZeroβ₂ = refl
+--     PSE-Syntax : (S : PSE) → Set₁
+--     PSE-Syntax S = (DS : D-PSE S) → DPSE-Morphism DS
 
-    trilRa : Razor
-    trilRa .Razor.Ty = Set
-    trilRa .Razor.Tm A = A
-    trilRa .Razor.Bl = Maybe Bool
-    trilRa .Razor.Nt = ℕ
-    trilRa .Razor.trueᵣ = just true
-    trilRa .Razor.falseᵣ = just false
-    trilRa .Razor.ite (just false) t f = f
-    trilRa .Razor.ite (just true) t f = t
-    trilRa .Razor.ite {A} nothing t f = t
-    trilRa .Razor.ι n = n
-    trilRa .Razor._+ᵣ_ = _+_
-    trilRa .Razor.isZero u = just (u ≡ᵇ 0)
-    trilRa .Razor.iteβ₁ = refl
-    trilRa .Razor.iteβ₂ = refl
-    trilRa .Razor.+β = refl
-    trilRa .Razor.isZeroβ₁ = refl
-    trilRa .Razor.isZeroβ₂ = refl
+--     natN : PSE
+--     natN .N = ℕ
+--     natN .z = zero
+--     natN .s = suc
 
-    module Exercises (Ra : Razor) where
-        open Razor Ra
+--     natN-syn : PSE-Syntax natN
+--     natN-syn DS .N zero = DS .base
+--     natN-syn DS .N (suc n) = DS .ind (natN-syn DS .N n)
+--     natN-syn DS .z-eq = refl
+--     natN-syn DS .s-eq = refl
 
-        exercise15 : ∀ {A} {u v : Tm A} → trueᵣ ≡ falseᵣ → u ≡ v
-        exercise15 {A} {u} {v} t=f =
-            sym (iteβ₁ {u = u} {v = v})
-            ⊡ cong (λ x → ite x _ _) t=f
-            ⊡ iteβ₂
+--     Elim : Set₁
+--     Elim = (P : ℕ → Set) → P zero → (∀ {n} → P n → P (suc n)) → (∀ n → P n)
 
-        exercise16 : ∀ {A} {u v : Tm A} → ι 0 ≡ ι 1 → u ≡ v
-        exercise16 0=1 = exercise15 t=f where
-            t=f : _
-            t=f = sym isZeroβ₁ ⊡ cong isZero 0=1 ⊡ isZeroβ₂
+--     elim : Elim
+--     elim P base ind zero = base
+--     elim P base ind (suc n) = ind (elim P base ind n)
 
-        -- exercise17 : ∃ λ (x : Razor) → Razor.Tm {!   !} {!   !} ≡ Maybe Bool
-        -- exercise17 = {!   !}
+--     e-nadd : ℕ → ℕ → ℕ
+--     e-nadd n m = elim (λ _ → ℕ) n (λ m → suc m) m
+
+--     DN-add : ∀ {S} → D-PSE S
+--     DN-add {S} .P _ =  S .N → S .N
+--     DN-add {S} .base n = n
+--     DN-add {S} .ind {n} f m = S .s (f m)
+
+--     s-add : ∀ {S} → (PSE-Syntax S) → S .N → S .N → S .N
+--     s-add {S} dm→dmo = (dm→dmo DN-add) .N
+
+--     s-nadd = s-add natN-syn
+
+--     DN-add-idr : ∀ {S} → PSE-Syntax S → D-PSE S
+--     DN-add-idr {S} dm→dmo = let s-add' = s-add dm→dmo in record {
+--         P = λ x → s-add' x (S .z) ≡ x ;
+--         base = cong (λ a → a (S .z)) (z-eq (dm→dmo DN-add)) ;
+--         ind = λ {n} p →
+--             cong (λ x → x (S .z)) (s-eq (dm→dmo DN-add))
+--             ⊡ cong (λ x → S .s x) p}
+
+--     0≢1 : (0 ≡ 1) → ⊥
+--     0≢1 0≡1 = subst aux 0≡1 tt where
+--         aux : _
+--         aux zero = ⊤
+--         aux (suc n) = ⊥
+
+--     zesu : ∀ (n : ℕ) → 0 ≡ suc n → ⊥
+--     zesu = elim _ 0≢1 λ {n} 0≢1+n 0≡2+n → 0≢1+n (cong pred 0≡2+n)
+
+--     DN-auxb : ∀ {S} → D-PSE S
+--     DN-auxb {S} .P _ = Bool
+--     DN-auxb {S} .base = false
+--     DN-auxb {S} .ind = λ _ → true
+
+--     DN-pred : ∀ {S} → D-PSE S
+--     DN-pred {S} .P _ = S .N
+--     DN-pred {S} .base = S .z
+--     DN-pred {S} .ind {n} _ = n
+
+--     exercise12-1 : ∀ {S} → PSE-Syntax S → D-PSE S
+--     exercise12-1 {S} syn .P x = (S .z ≡ S .s x) → ⊥
+--     exercise12-1 {S} syn .base z≡sz = subst T aux tt where
+--         aux : true ≡ false
+--         aux =
+--             sym (s-eq (syn _))
+--             ⊡ sym (sym (z-eq (syn _))
+--             ⊡ (cong ((syn DN-auxb) .N) z≡sz))
+
+--     exercise12-1 {S} syn .ind {n} 0≢sn 0≡ssn = 0≢sn aux where
+--         DNo = syn DN-pred
+--         aux : _
+--         aux =
+--             sym (z-eq DNo)
+--             ⊡ cong (DNo . N) 0≡ssn
+--             ⊡ s-eq DNo
+
+-- module Chapter2-3 where
+--     record Razor : Set₂ where
+--         infixr 6 _+ᵣ_
+--         field
+--             Ty : Set₁
+--             Tm : (A : Ty) → Set
+--             Bl : Ty
+--             Nt : Ty
+--             trueᵣ : Tm Bl
+--             falseᵣ : Tm Bl
+--             ite : ∀ {A : Ty} → (b : Tm Bl) → (t : Tm A) → (f : Tm A) → Tm A
+--             ι : (n : ℕ) → Tm Nt
+--             _+ᵣ_ : (u : Tm Nt) → (v : Tm Nt) → Tm Nt
+--             isZero : (u : Tm Nt) → Tm Bl
+--             iteβ₁ : ∀ {A} {u v : Tm A} → ite trueᵣ u v ≡ u
+--             iteβ₂ : ∀ {A} {u v : Tm A} → ite falseᵣ u v ≡ v
+--             +β : ∀ {n m} → ι n +ᵣ ι m ≡ ι (n + m)
+--             isZeroβ₁ : isZero (ι 0) ≡ trueᵣ
+--             isZeroβ₂ : ∀ {n} → isZero (ι (suc n)) ≡ falseᵣ
+
+
+--     module Examples (Ra : Razor) where
+--         open Razor Ra
+
+--         notᵣ : Tm Bl → Tm Bl
+--         notᵣ b = ite b falseᵣ trueᵣ
+
+--         example1 : notᵣ trueᵣ ≡ falseᵣ
+--         example1 = iteβ₁
+
+--         example2 : (ι 1 +ᵣ ι 2) +ᵣ (ι 3 +ᵣ ι 4) ≡  ι 10
+--         example2 = cong (_+ᵣ (_ +ᵣ _)) +β ⊡ cong (_ +ᵣ_) +β ⊡ +β
+
+--     setRa : Razor
+--     setRa .Razor.Ty = Set
+--     setRa .Razor.Tm A = A
+--     setRa .Razor.Bl = Bool
+--     setRa .Razor.Nt = ℕ
+--     setRa .Razor.trueᵣ = true
+--     setRa .Razor.falseᵣ = false
+--     setRa .Razor.ite b t f = if b then t else f
+--     setRa .Razor.ι n = n
+--     setRa .Razor._+ᵣ_ = _+_
+--     setRa .Razor.isZero u = u ≡ᵇ 0
+--     setRa .Razor.iteβ₁ = refl
+--     setRa .Razor.iteβ₂ = refl
+--     setRa .Razor.+β = refl
+--     setRa .Razor.isZeroβ₁ = refl
+--     setRa .Razor.isZeroβ₂ = refl
+
+--     trilRa : Razor
+--     trilRa .Razor.Ty = Set
+--     trilRa .Razor.Tm A = A
+--     trilRa .Razor.Bl = Maybe Bool
+--     trilRa .Razor.Nt = ℕ
+--     trilRa .Razor.trueᵣ = just true
+--     trilRa .Razor.falseᵣ = just false
+--     trilRa .Razor.ite (just false) t f = f
+--     trilRa .Razor.ite (just true) t f = t
+--     trilRa .Razor.ite {A} nothing t f = t
+--     trilRa .Razor.ι n = n
+--     trilRa .Razor._+ᵣ_ = _+_
+--     trilRa .Razor.isZero u = just (u ≡ᵇ 0)
+--     trilRa .Razor.iteβ₁ = refl
+--     trilRa .Razor.iteβ₂ = refl
+--     trilRa .Razor.+β = refl
+--     trilRa .Razor.isZeroβ₁ = refl
+--     trilRa .Razor.isZeroβ₂ = refl
+
+--     module Exercises (Ra : Razor) where
+--         open Razor Ra
+
+--         exercise15 : ∀ {A} {u v : Tm A} → trueᵣ ≡ falseᵣ → u ≡ v
+--         exercise15 {A} {u} {v} t=f =
+--             sym (iteβ₁ {u = u} {v = v})
+--             ⊡ cong (λ x → ite x _ _) t=f
+--             ⊡ iteβ₂
+
+--         exercise16 : ∀ {A} {u v : Tm A} → ι 0 ≡ ι 1 → u ≡ v
+--         exercise16 0=1 = exercise15 t=f where
+--             t=f : _
+--             t=f = sym isZeroβ₁ ⊡ cong isZero 0=1 ⊡ isZeroβ₂
+
+--         -- exercise17 : ∃ λ (x : Razor) → Razor.Tm {!   !} {!   !} ≡ Maybe Bool
+--         -- exercise17 = {!   !}
 
 
