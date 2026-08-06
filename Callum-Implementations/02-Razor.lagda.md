@@ -4,7 +4,7 @@ module _ where
 open import Data.Nat
 open import Data.Product
 open import Data.Empty renaming (⊥ to ⊥ᵘ)
-open import Data.Bool using (_∧_) renaming (Bool to StdBool; false to ⊥ᵇ; true to ⊤ᵇ)
+open import Data.Bool using (_∧_) renaming (Bool to 𝔹; false to ⊥ᵇ; true to ⊤ᵇ)
 open import Relation.Binary.PropositionalEquality
 open import Shorthands
 ```
@@ -95,8 +95,8 @@ module Exercise-17 where
     where 
       -- Omitting the type of r makes agda fail silently
       r : R Set (λ A → A)
-      r = record { Bool = StdBool
-                 ; Nat = StdBool
+      r = record { Bool = 𝔹
+                 ; Nat = 𝔹
                  ; true = ⊤ᵇ
                  ; false = ⊥ᵇ
                  ; ite = λ {⊤ᵇ → λ x _ → x ; ⊥ᵇ → λ _ y → y }
@@ -148,33 +148,36 @@ module Exercise-18 where
 ### Exercise-19
 Currently part 2 and 3 of this exercise are not done
 ```agda
+module StandardModel where
+  StandardModel : R Set (λ A → A)
+  StandardModel = record { 
+                  Bool = 𝔹
+                ; Nat = ℕ
+                ; true = ⊤ᵇ
+                ; false = ⊥ᵇ
+                ; ite = λ {⊤ᵇ → λ x _ → x ; ⊥ᵇ → λ _ y → y }
+                ; num = λ n → n
+                ; _+`_ = λ x y → x + y
+                ; isZero = λ {zero → ⊤ᵇ ; (suc _) → ⊥ᵇ}
+                ; iteβ₁ = refl
+                ; iteβ₂ = refl
+                ; +β = refl
+                ; isZeroβ₁ = refl
+                ; isZeroβ₂ = refl
+                }
+
 module Exercise-19 where
+  open StandardModel
   open Exercise-18
 
   module Part-01 where
     open R
-    ℕ𝔹-model : R Set (λ A → A)
-    ℕ𝔹-model = record { 
-                    Bool = StdBool
-                  ; Nat = ℕ
-                  ; true = ⊤ᵇ
-                  ; false = ⊥ᵇ
-                  ; ite = λ {⊤ᵇ → λ x _ → x ; ⊥ᵇ → λ _ y → y }
-                  ; num = λ n → n
-                  ; _+`_ = λ x y → x + y
-                  ; isZero = λ {zero → ⊤ᵇ ; (suc _) → ⊥ᵇ}
-                  ; iteβ₁ = refl
-                  ; iteβ₂ = refl
-                  ; +β = refl
-                  ; isZeroβ₁ = refl
-                  ; isZeroβ₂ = refl
-                  }
-
 
     ex19₁ : ∃₃ λ (Ty : Set₁) (Tm : Ty → Set) (m : R Ty Tm) 
           → true m ≢ false m × (∀ (t : Tm (Bool m)) (ty : Ty) (u : Tm ty) → ite m t u u ≡ u) 
-    ex19₁ = -, -, ℕ𝔹-model , (λ ()) , λ { ⊤ᵇ _ _ → refl ; ⊥ᵇ _ _ → refl }
+    ex19₁ = -, -, StandardModel , (λ ()) , λ { ⊤ᵇ _ _ → refl ; ⊥ᵇ _ _ → refl }
     
+ 
 
   module Part-02 where
     {- INCOMPLETE
@@ -272,7 +275,7 @@ module _
               {Tyₘ : Set₁}
               {Tmₘ : Tyₘ → Set}
               (r   : R Tyₘ Tmₘ) 
-              (Ty  : Tyₘ → Set) 
+              (Ty  : Tyₘ → Set₁) 
               (Tm  : {Aₘ : Tyₘ} → Ty Aₘ → Tmₘ Aₘ → Set) 
       where
   open R r renaming (Bool to Boolₘ  ; Nat to Natₘ      ;
@@ -315,7 +318,7 @@ module _
     {Tyₘ : Set₁}
     {Tmₘ : Tyₘ → Set}
     (r : R Tyₘ Tmₘ) 
-    {Tyᵈ : Tyₘ → Set}
+    {Tyᵈ : Tyₘ → Set₁}
     {Tmᵈ : {Aₘ : Tyₘ} → Tyᵈ Aₘ → Tmₘ Aₘ → Set}
     (rᵈ  : R-Dep r Tyᵈ Tmᵈ)
     (Ty  : (Aₘ : Tyₘ) → Tyᵈ Aₘ)
@@ -359,11 +362,32 @@ module Syntax
   where
   open R
 
-  R-Syn : R Tyₘ Tmₘ → Set₁
-  R-Syn rₘ = ∀ {Tyᵈ : Tyₘ → Set}
+  R-Syn : R Tyₘ Tmₘ → Set₂
+  R-Syn rₘ = ∀ {Tyᵈ : Tyₘ → Set₁}
            → ∀ {Tmᵈ : {Aₘ : Tyₘ} → Tyᵈ Aₘ → Tmₘ Aₘ → Set}
            → ∀ (rᵈ : R-Dep rₘ Tyᵈ Tmᵈ) 
            → ∃₂ (R-Sec rₘ rᵈ)
+```
+## The standard model forms a syntax
+```agda
+module _ where
+  open StandardModel
+  open Syntax
+
+  {-
+  a : R-Syn Set (λ A → A) StandardModel
+  a {Tyᵈ} {Tmᵈ} rᵈ = (λ Aₘ → ?) , ? , record
+                                       { Bool = ?
+                                       ; Nat = ?
+                                       ; true = ?
+                                       ; false = ?
+                                       ; ite = ?
+                                       ; num = ?
+                                       ; _+`_ = ?
+                                       ; isZero = ?
+                                       }
+  -}
+                  
 ```
 # Unique
 
@@ -410,9 +434,65 @@ module R-Int
 # Normal-Form
 
 ```agda
-module NormalForm (Tyₘ : Set₁) (Tmₘ : Tyₘ → Set) (rₘ : R Tyₘ Tmₘ) where
-  open R
-  open R-Hom
+module _ where
+  open R-Int
+  module NormalForm (Tyᵢ : Set₁) (Tmᵢ : Tyᵢ → Set) (rᵢ : R Tyᵢ Tmᵢ) (initial : R-Int rᵢ) where
+    open StandardModel
+    open R
+    open R-Hom
+    open Syntax
+
+    {-
+    postulate 
+      StandardModelIsSyntax : R-Syn _ _ StandardModel
+
+    dependent-model : R-Dep StandardModel (λ _ → Set) (λ a b → a)
+    dependent-model = record
+                       { Bool = 𝔹
+                       ; Nat = ℕ
+                       ; true = ⊤ᵇ
+                       ; false = ⊥ᵇ
+                       ; ite = λ { ⊤ᵇ x₁ x₂ → x₁ ; ⊥ᵇ x₁ x₂ → x₂ }
+                       ; num = λ { n → n }
+                       ; _+`_ = _+_
+                       ; isZero = λ { zero → ⊤ᵇ ; (suc n) → ⊥ᵇ }
+                       ; iteβ₁ = refl
+                       ; iteβ₂ = refl
+                       ; +β = refl
+                       ; isZeroβ₁ = refl
+                       ; isZeroβ₂ = refl
+                       }
+
+    dependent-morphism : R-Sec StandardModel dependent-model ? ?
+    dependent-morphsim = ?
+
+    
+    A : R-Sec rᵢ ? ? ? 
+    -}
+
+    Nf : Tyᵢ → Set
+    Nf x = ?
+
+    norm : {Aᵢ : Tyᵢ} → Tmᵢ Aᵢ → Nf Aᵢ
+    norm x = ?
+
+    normalisation : R-Hom rᵢ StandardModel Nf norm
+    normalisation = record
+                     { Bool = ?
+                     ; Nat = ?
+                     ; true = ?
+                     ; false = ?
+                     ; ite = ?
+                     ; num = ?
+                     ; _+`_ = ?
+                     ; izZero = ?
+                     }
+    
+    quot : (Aᵢ : Tyᵢ) → Nf Aᵢ → Tmᵢ Aᵢ
+    quot Aᵢ x = ?
+
+
+
 ```
 
 
