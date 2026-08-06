@@ -4,7 +4,7 @@ module 02-03-Razor where
 open import Data.Nat
 open import Data.Product
 open import Data.Empty renaming (⊥ to ⊥ᵘ)
-open import Data.Bool using (_∧_) renaming (Bool to StdBool; false to ⊥ᵇ; true to ⊤ᵇ)
+open import Data.Bool using (_∧_) renaming (Bool to 𝔹; false to ⊥ᵇ; true to ⊤ᵇ)
 open import Relation.Binary.PropositionalEquality
 open import Shorthands
 ```
@@ -95,8 +95,8 @@ module Exercise-17 where
     where 
       -- Omitting the type of r makes agda fail silently
       r : R Set (λ A → A)
-      r = record { Bool = StdBool
-                 ; Nat = StdBool
+      r = record { Bool = 𝔹
+                 ; Nat = 𝔹
                  ; true = ⊤ᵇ
                  ; false = ⊥ᵇ
                  ; ite = λ {⊤ᵇ → λ x _ → x ; ⊥ᵇ → λ _ y → y }
@@ -155,7 +155,7 @@ module Exercise-19 where
     open R
     ℕ𝔹-model : R Set (λ A → A)
     ℕ𝔹-model = record { 
-                    Bool = StdBool
+                    Bool = 𝔹
                   ; Nat = ℕ
                   ; true = ⊤ᵇ
                   ; false = ⊥ᵇ
