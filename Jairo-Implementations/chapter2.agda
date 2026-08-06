@@ -1,5 +1,3 @@
---{-# OPTIONS --without-K #-}
-
 open import Data.List as L
 open import Data.Nat
 open import Data.Product
@@ -12,7 +10,7 @@ open import Data.Empty using (⊥; ⊥-elim)
 open import Data.Unit.Base
 open import Data.Bool.Base
 open import Data.Maybe.Base
-open import Function using (_$_)
+open import Function using (_$_ ; _∘_)
 
 infixr 6 _⊡_
 _⊡_ = trans
@@ -22,10 +20,10 @@ UIP' = ∀ {a} {A : Set a} → UIP A
 
 -- Some useful lemmas about substitution
 module _ where
-    variable
+    private variable
         A B : Set
         a a1 a2 : A
-        b b1 b2 : B
+        b : B
         P : A → Set
 
     subst-id :{eq : a1 ≡ a2} → subst (λ _ → B) eq b ≡ b
@@ -41,6 +39,8 @@ module _ where
 module Chapter2-1 where
 
     -- Definition : Monoid
+    -- We define it inside a parametrized module for readability
+    -- C is the carrier of the monoid
     module _ (C : Set) where
         variable x y z : C
         record Monoid : Set where
@@ -53,29 +53,30 @@ module Chapter2-1 where
             infixr 6 _∙_
     open Monoid
 
+    -- Carried and monoid wrapper
     record M : Set₁ where
         field
             C : Set
-            ι : Monoid C
+            ↑ : Monoid C
     open M
 
     -- Exercise 2.3: The unary monoid
     -- TODO: finish exercise 2
-    ⊤M : M
-    ⊤M .C = ⊤
-    ⊤M .ι ._∙_ _ _ = tt
-    ⊤M .ι .u = tt
-    ⊤M .ι .idl = refl
-    ⊤M .ι .idr = refl
-    ⊤M .ι .ass = refl
+    ⊤-m : M
+    ⊤-m .C = ⊤
+    ⊤-m .↑ ._∙_ _ _ = tt
+    ⊤-m .↑ .u = tt
+    ⊤-m .↑ .idl = refl
+    ⊤-m .↑ .idr = refl
+    ⊤-m .↑ .ass = refl
 
     -- Definition : Monoid Morphism
     record M-Hom (m n : M) : Set where
-        open Monoid (ι m) renaming (_∙_ to _∙ᵐ_ ; u to uₘ)
-        open Monoid (ι n) renaming (_∙_ to _∙ⁿ_ ; u to uₙ)
+        open Monoid (↑ m) renaming (_∙_ to _∙ᵐ_ ; u to uᵐ)
+        open Monoid (↑ n) renaming (_∙_ to _∙ⁿ_ ; u to uⁿ)
         field
             C : m .C → n .C
-            u-eq : C uₘ ≡ uₙ
+            u-eq : C uᵐ ≡ uⁿ
             ∙-eq : C (x ∙ᵐ y) ≡ C x ∙ⁿ C y
     open M-Hom
 
@@ -87,9 +88,9 @@ module Chapter2-1 where
         m-id .∙-eq = refl
 
         m-u : M-Hom m m
-        m-u .C x = ι m .u
+        m-u .C x = ↑ m .u
         m-u .u-eq = refl
-        m-u .∙-eq = sym (ι m .idl)
+        m-u .∙-eq = sym (↑ m .idl)
 
     -- TODO : Exercise 3
 
@@ -101,7 +102,7 @@ module Chapter2-1 where
             cz : C z
 
         record Monoid-Dep : Set₁ where
-            open Monoid (ι m) renaming (_∙_ to _∙ᵐ_; u to uᵐ)
+            open Monoid (↑ m) renaming (_∙_ to _∙ᵐ_; u to uᵐ)
             field
                 u    : C uᵐ
                 _∙_  : C x → C y → C (x ∙ᵐ y)
@@ -114,39 +115,39 @@ module Chapter2-1 where
     record M-Dep (m : M) : Set₁ where
         field
             C : m .C → Set
-            ι : Monoid-Dep m C
+            ↑ : Monoid-Dep m C
     open M-Dep
 
     -- Exercise 4
     module _ {n : M} (m : M) where
-        open Monoid (ι m) renaming (_∙_ to _∙ᵐ_)
+        open Monoid (↑ m) renaming (_∙_ to _∙ᵐ_)
 
         m→d : M-Dep n
         m→d .C _ = m .C
-        m→d .ι ._∙_ = _∙ᵐ_
-        m→d .ι .u = ι m .u
-        m→d .ι .idl {x} {cx} {eq} rewrite (ι m .idl {cx}) = subst-id
-        m→d .ι .idr {x} {cx} {eq} rewrite (ι m .idr {cx}) = subst-id
-        m→d .ι .ass {x} {cx} {y} {cy} {z} {cz} {eq}
-            rewrite (ι m .ass {x = cx} {y = cy} {z = cz}) = subst-id
+        m→d .↑ ._∙_ = _∙ᵐ_
+        m→d .↑ .u = ↑ m .u
+        m→d .↑ .idl {x} {cx} {eq} rewrite (↑ m .idl {cx}) = subst-id
+        m→d .↑ .idr {x} {cx} {eq} rewrite (↑ m .idr {cx}) = subst-id
+        m→d .↑ .ass {x} {cx} {y} {cy} {z} {cz} {eq}
+            rewrite (↑ m .ass {x = cx} {y = cy} {z = cz}) = subst-id
 
     -- Exercise 5
     module _ {m : M} (d : M-Dep m) where
-        open Monoid (ι m) renaming (_∙_ to _∙ᵐ_)
-        open Monoid-Dep (ι d) renaming (_∙_ to _∙ᵈ_)
+        open Monoid (↑ m) renaming (_∙_ to _∙ᵐ_)
+        open Monoid-Dep (↑ d) renaming (_∙_ to _∙ᵈ_)
 
         d→∃m : M
         d→∃m .C = ∃ (λ x → d .C x)
-        d→∃m .ι ._∙_ (x , cx) (y , cy) = (x ∙ᵐ y) , (cx ∙ᵈ cy)
-        d→∃m .ι .u = ι m .u , ι d .u
-        d→∃m .ι .idl = Σ-≡,≡→≡ (ι m .idl , ι d .idl)
-        d→∃m .ι .idr = Σ-≡,≡→≡ (ι m .idr , ι d .idr)
-        d→∃m .ι .ass = Σ-≡,≡→≡ (ι m .ass , ι d .ass)
+        d→∃m .↑ ._∙_ (x , cx) (y , cy) = (x ∙ᵐ y) , (cx ∙ᵈ cy)
+        d→∃m .↑ .u = ↑ m .u , ↑ d .u
+        d→∃m .↑ .idl = Σ-≡,≡→≡ (↑ m .idl , ↑ d .idl)
+        d→∃m .↑ .idr = Σ-≡,≡→≡ (↑ m .idr , ↑ d .idr)
+        d→∃m .↑ .ass = Σ-≡,≡→≡ (↑ m .ass , ↑ d .ass)
 
     -- Definition : Dependent Morphism
     record M-Sec {m : M} (d : M-Dep m) : Set₁ where
-        open Monoid (ι m) renaming (_∙_ to _∙ᵐ_ ; u to uᵐ)
-        open Monoid-Dep (ι d) renaming (_∙_ to _∙ᵈ_ ; u to uᵈ)
+        open Monoid (↑ m) renaming (_∙_ to _∙ᵐ_ ; u to uᵐ)
+        open Monoid-Dep (↑ d) renaming (_∙_ to _∙ᵈ_ ; u to uᵈ)
         field
             C : ∀ x → d .C x
             u-eq : C uᵐ ≡  uᵈ
@@ -159,12 +160,12 @@ module Chapter2-1 where
 
     -- Exercise 6
     ∃-M-Syn : ∃ λ m → M-Syn m
-    ∃-M-Syn .proj₁ = ⊤M
-    ∃-M-Syn .proj₂ d .C tt = ι d .u
+    ∃-M-Syn .proj₁ = ⊤-m
+    ∃-M-Syn .proj₂ d .C tt = ↑ d .u
     ∃-M-Syn .proj₂ d .u-eq = refl
-    ∃-M-Syn .proj₂ d .∙-eq {tt} {tt} = sym (ι d .idl)
+    ∃-M-Syn .proj₂ d .∙-eq {tt} {tt} = sym (↑ d .idl)
 
-    ⊤M-Syn = proj₂ ∃-M-Syn
+    ⊤-m-Syn = proj₂ ∃-M-Syn
 
     -- Definition: Initial
     M-Ini : M → Set₁
@@ -172,8 +173,10 @@ module Chapter2-1 where
         (n : M) → (M-Hom m n × (∀ (mh nh : M-Hom m n) x → mh .C x ≡ nh .C x))
 
     -- Exercise 7
-    module _ (uip : UIP') (m : M) where
-        variable
+    -- TODO: The identity morphism is part of exercise 8.
+    -- Is there a way to prove exericise 7 without using it?
+    module _ (m : M) where
+        private variable
             n : M
 
         m-syn→nh : (M-Syn m) → M-Hom m n
@@ -182,46 +185,222 @@ module Chapter2-1 where
                 ; u-eq = s .u-eq
                 ; ∙-eq = s .∙-eq}
 
-        m-syn→nh-uniq : (M-Syn m) → ∀ (mh nh : M-Hom m n) x → mh .C x ≡ nh .C x
-        m-syn→nh-uniq {n} md→s mh nh = (md→s d) .C where
+        m-syn-ini : UIP' → (M-Syn m) → ∀ (mh nh : M-Hom m n) x
+            → mh .C x ≡ nh .C x
+        m-syn-ini {n} uip md→s mh nh = (md→s d) .C where
             d : M-Dep m
             d .C y = mh .C y ≡ nh .C y
-            d .ι .u = (mh .u-eq) ⊡ sym (nh .u-eq)
-            d .ι ._∙_ cx cy =
-                mh .∙-eq ⊡ cong₂ (ι n ._∙_) cx cy ⊡ sym (nh .∙-eq)
-            d .ι .idl = uip _ _
-            d .ι .idr = uip _ _
-            d .ι .ass = uip _ _
+            d .↑ .u = (mh .u-eq) ⊡ sym (nh .u-eq)
+            d .↑ ._∙_ cx cy =
+                mh .∙-eq ⊡ cong₂ (↑ n ._∙_) cx cy ⊡ sym (nh .∙-eq)
+            d .↑ .idl = uip _ _
+            d .↑ .idr = uip _ _
+            d .↑ .ass = uip _ _
 
-        m-syn→ini : (M-Syn m) → (M-Ini m)
-        m-syn→ini md→s n = m-syn→nh md→s , m-syn→nh-uniq md→s
+        m-syn→ini : UIP' → (M-Syn m) → (M-Ini m)
+        m-syn→ini uip md→s n = m-syn→nh md→s , m-syn-ini uip md→s
 
-        m-ini-u : ∀ {m} → M-Ini m → (x : m .C) → x ≡ ι m .u
-        m-ini-u {m} m→nh-uniq = proj₂ (m→nh-uniq m) m-id m-u
+        m-ini-u : ∀ {m} → M-Ini m → (x : m .C) → x ≡ ↑ m .u
+        m-ini-u {m} m-ini = proj₂ (m-ini m) m-id m-u
 
         md-idu : ∀ {eq} {d : M-Dep m}
-            → ι d ._∙_ (ι d .u) (ι d .u) ≡ subst (d .C) eq (ι d .u)
-        md-idu {eq} {d} = subst-com {eq1 = ι m .idl} (ι d .idr)
+            → ↑ d ._∙_ (↑ d .u) (↑ d .u) ≡ subst (d .C) eq (↑ d .u)
+        md-idu {eq} {d} = subst-com {eq1 = ↑ m .idl} (↑ d .idr)
 
         m-ini→syn :  (M-Ini m) → (M-Syn m)
-        m-ini→syn m→nh-uniq d = s where
+        m-ini→syn m-ini d = s where
             s : M-Sec d
-            s .C x = subst (d .C) (sym (m-ini-u m→nh-uniq x)) (ι d .u)
+            s .C x = subst (d .C) (sym (m-ini-u m-ini x)) (↑ d .u)
             s .u-eq = subst-ref
-            s .∙-eq {x} {y} with (m-ini-u m→nh-uniq x) | (m-ini-u m→nh-uniq y)
+            s .∙-eq {x} {y} with (m-ini-u m-ini x) | (m-ini-u m-ini y)
             ... | refl | refl = sym $ md-idu {d = d}
 
+    -- Exercise 8
+    module _ where
+        private variable
+            m n m1 m2 m3 : M
 
+        m-id' : M-Hom m m
+        m-id' = m-id
 
-    -- TODO: Exercise 8
+        _∘ₕ_ : M-Hom m1 m2 → M-Hom m2 m3 → M-Hom m1 m3
+        _∘ₕ_ h12 h23 .C = h23 .C ∘ h12 .C
+        _∘ₕ_ h12 h23 .u-eq rewrite (h12 .u-eq) = h23 .u-eq
+        _∘ₕ_ h12 h23 .∙-eq {x} {y} rewrite (h12 .∙-eq {x} {y})= h23 .∙-eq
 
-    -- TODO: Exercise 9
+        ∘ₕ-id : M-Hom m n → M-Hom n m → Set
+        ∘ₕ-id {m} {n} nh mh = ∀ x → (nh ∘ₕ mh) .C x ≡ m-id {m} .C x
 
-    -- record M-Hom {Cₘ Cₙ : Set} (m : M Cₘ) (n : M Cₙ) : Set where
+        _≅ₕ_ : M-Hom m n → M-Hom n m → Set
+        _≅ₕ_ {m} {n} nh mh = (∘ₕ-id nh mh) × (∘ₕ-id mh nh)
+
+        _≅ᵐ_ : (m n : M) → Set
+        m ≅ᵐ n = ∃₂ λ (mh : M-Hom m n) nh → mh ≅ₕ nh
+
+        syn-≅ᵐ : UIP' → M-Syn m → M-Syn n → m ≅ᵐ n
+        syn-≅ᵐ {m} {n} uip md→s nd→s =
+            proj₁ (m-ini n) , proj₁ (n-ini m) , m-∘ₕ-id , n-∘ₕ-id
+            where
+            m-ini = m-syn→ini m uip md→s
+
+            n-ini = m-syn→ini n uip nd→s
+
+            m-∘ₕ-id : _
+            m-∘ₕ-id x = (m-ini-u m m-ini _) ⊡ sym (m-ini-u m m-ini _)
+
+            n-∘ₕ-id : _
+            n-∘ₕ-id x = (m-ini-u n n-ini _) ⊡ sym (m-ini-u n n-ini _)
+
+    -- Exercise 9
+    module _ (m : M) where
+        private variable
+            -x -y : m .C
+
+        open Monoid (↑ m) renaming
+            (_∙_ to _∙ᵐ_ ; u to uᵐ ; idr to idrᵐ ; idl to idlᵐ ; ass to assᵐ )
+
+        M-Inv : (x -x : m .C) → Set
+        M-Inv x -x = (x ∙ᵐ -x) ≡ uᵐ × (-x ∙ᵐ x) ≡ uᵐ
+
+        ∙-inv : M-Inv x -x → M-Inv y -y → M-Inv (x ∙ᵐ y) (-y ∙ᵐ -x)
+        ∙-inv {x} { -x} {y} { -y} (lx , rx) (ly , ry) .proj₁
+            rewrite
+                (assᵐ {x ∙ᵐ y} { -y} { -x}) | sym (assᵐ {x} {y} { -y})
+                | ly | idrᵐ {x} = lx
+        ∙-inv {x} { -x} {y} { -y} (lx , rx) (ly , ry) .proj₂
+            rewrite
+            (assᵐ { -y ∙ᵐ -x} {x} {y})
+            | sym (assᵐ { -y} { -x} {x})
+            | rx | idrᵐ { -y} = ry
+
+        inv-uniq : M-Inv x -x → M-Inv x -y → -x ≡ -y
+        inv-uniq {x} { -x} { -y} (lx , rx) (ly , ry) =
+            sym (idlᵐ { -x})
+            ⊡ cong (_∙ᵐ -x) (sym ry)
+            ⊡ sym assᵐ
+            ⊡ cong (-y ∙ᵐ_) lx
+            ⊡ idrᵐ
+
+        group-md : UIP' → M-Dep m
+        group-md uip .C x = ∃ λ -x → M-Inv x -x
+        group-md uip .↑ = record {
+            u = uᵐ , idlᵐ , idlᵐ
+            ; _∙_ = λ (-x , invx) (-y , invy) → (-y ∙ᵐ -x) , ∙-inv invx invy
+            ; idl = aux
+            ; idr = aux
+            ; ass = aux }
+            where
+                aux : {∃x ∃y : ∃ (M-Inv x)} → ∃x ≡ ∃y
+                aux {x} {_ , invx} {_ , invy} =
+                    Σ-≡,≡→≡ $ inv-uniq invx invy , Σ-≡,≡→≡ (uip _ _ , uip _ _)
+
+module Chapter2-2 where
+    -- Definition: Pointed Set with Endofunction
+    record PSE : Set₁ where
+        field
+            N : Set
+            z : N
+            s : N → N
+    open PSE
+
+    -- Definition: PSE Morphism
+    record PSE-Hom (p t : PSE) : Set where
+        open PSE p renaming (N to Nᵖ ; z to zᵖ ; s to sᵖ)
+        open PSE t renaming (N to Nᵗ ; z to zᵗ ; s to sᵗ)
+        field
+            N  : Nᵖ → Nᵗ
+            z-eq : N zᵖ ≡ zᵗ
+            s-eq : N (sᵖ zᵖ) ≡ sᵗ (N zᵖ)
+
+    -- Definition: Dependent PSE
+    module _ (p : PSE) where
+        open PSE p renaming (N to Nᵖ ; z to zᵖ ; s to sᵖ)
+        variable n : Nᵖ
+        record PSE-Dep : Set₁ where
+            field
+                N : (n : Nᵖ) → Set
+                z : N zᵖ
+                s : N n → N (sᵖ n)
+    open PSE-Dep
+
+    -- Definition: Dependent PSE Morphism
+    record PSE-Sec {p : PSE} (d : PSE-Dep p) : Set₁ where
+        open PSE p renaming (N to Nᵖ ; z to zᵖ ; s to sᵖ)
+        open PSE-Dep d renaming (N to Nᵈ ; z to zᵈ ; s to sᵈ)
+        field
+            N : (n : Nᵖ) → Nᵈ n
+            z-eq : N zᵖ ≡ zᵈ
+            s-eq : N (sᵖ n) ≡ sᵈ (N n)
+    open PSE-Sec
+
+    -- Definition: PSE Syntax
+    PSE-Syn : (p : PSE) → Set₁
+    PSE-Syn p = (d : PSE-Dep p) → PSE-Sec d
+
+    -- Exercise 11
+    -- TODO: Finish Exercise 11
+    module _ (p : PSE) where
+        open PSE p renaming (N to Nᵖ ; z to zᵖ ; s to sᵖ)
+
+        add-pd : PSE-Dep p
+        add-pd .N _ = Nᵖ → Nᵖ
+        add-pd .z n = n
+        add-pd .s {n} f m = sᵖ (f m)
+
+        module _ (p→d : PSE-Syn p) where
+            syn-add : Nᵖ → Nᵖ → Nᵖ
+            syn-add = (p→d add-pd) .N
+
+            _+ᵖ_ = syn-add
+
+            syn-add-idr-pd : PSE-Dep p
+            syn-add-idr-pd .N n = n +ᵖ zᵖ ≡ n
+            syn-add-idr-pd .z rewrite z-eq (p→d add-pd) = refl
+            syn-add-idr-pd .s {m} eq
+                rewrite ((p→d add-pd) .s-eq {m} {zᵖ} {sᵖ}) | eq = refl
+
+            syn-add-idr : n +ᵖ zᵖ ≡ n
+            syn-add-idr {n} = (p→d syn-add-idr-pd) .N n
+
+    -- Exercise 12
+    -- TODO : Finish Exercise 12
+    module _ (p : PSE) where
+        open PSE p renaming (N to Nᵖ ; z to zᵖ ; s to sᵖ)
+
+        bool-pd : PSE-Dep p
+        bool-pd .N _ = Bool
+        bool-pd .z = false
+        bool-pd .s _ = true
+
+        pred-pd : PSE-Dep p
+        pred-pd .N _ = Nᵖ
+        pred-pd .z = zᵖ
+        pred-pd .s {n} _ = n
+
+        module _ (p→d : PSE-Syn p) where
+            0≢1-pd : PSE-Dep p
+            0≢1-pd .N n = zᵖ ≡ sᵖ n → ⊥
+            0≢1-pd .z z≡sz = subst T cont tt where
+                d = p→d bool-pd
+                cont : true ≡ false
+                cont = sym (d .s-eq {zᵖ} {zᵖ} {sᵖ})
+                    ⊡ sym (sym (d .z-eq)
+                    ⊡ cong (d .N) z≡sz)
+
+            0≢1-pd .s {n} 0≢sn 0≡ssn = 0≢sn z≡sn where
+                d = p→d pred-pd
+                z≡sn : zᵖ ≡ sᵖ n
+                z≡sn = (sym (d .z-eq))
+                    ⊡ cong (d .N) 0≡ssn
+                    ⊡ d .s-eq {sᵖ n} {zᵖ} {sᵖ}
+
+    -- TODO : Exercise 13
+
+    -- record M-Hom {Cᵐ Cⁿ : Set} (m : M Cᵐ) (n : M Cⁿ) : Set where
     --     open M m renaming (_∙_ to _∙ᵐ_) hiding (C)
     --     open M n renaming (_∙_ to _∙ⁿ_) hiding (C)
     --     field
-    --         C : Cₘ → Cₙ
+    --         C : Cᵐ → Cⁿ
     --         _∙_ : C (x ∙ᵐ y) ≡  (C x) ∙ⁿ (C y)
     --         u : C (m .u) ≡ n .u
 
@@ -602,47 +781,47 @@ module Chapter2-1 where
 
 -- module Chapter2-3 where
 --     record Razor : Set₂ where
---         infixr 6 _+ᵣ_
+--         infixr 6 _+ᵗ_
 --         field
 --             Ty : Set₁
 --             Tm : (A : Ty) → Set
 --             Bl : Ty
 --             Nt : Ty
---             trueᵣ : Tm Bl
---             falseᵣ : Tm Bl
+--             trueᵗ : Tm Bl
+--             falseᵗ : Tm Bl
 --             ite : ∀ {A : Ty} → (b : Tm Bl) → (t : Tm A) → (f : Tm A) → Tm A
---             ι : (n : ℕ) → Tm Nt
---             _+ᵣ_ : (u : Tm Nt) → (v : Tm Nt) → Tm Nt
+--             ↑ : (n : ℕ) → Tm Nt
+--             _+ᵗ_ : (u : Tm Nt) → (v : Tm Nt) → Tm Nt
 --             isZero : (u : Tm Nt) → Tm Bl
---             iteβ₁ : ∀ {A} {u v : Tm A} → ite trueᵣ u v ≡ u
---             iteβ₂ : ∀ {A} {u v : Tm A} → ite falseᵣ u v ≡ v
---             +β : ∀ {n m} → ι n +ᵣ ι m ≡ ι (n + m)
---             isZeroβ₁ : isZero (ι 0) ≡ trueᵣ
---             isZeroβ₂ : ∀ {n} → isZero (ι (suc n)) ≡ falseᵣ
+--             iteβ₁ : ∀ {A} {u v : Tm A} → ite trueᵗ u v ≡ u
+--             iteβ₂ : ∀ {A} {u v : Tm A} → ite falseᵗ u v ≡ v
+--             +β : ∀ {n m} → ↑ n +ᵗ ↑ m ≡ ↑ (n + m)
+--             isZeroβ₁ : isZero (↑ 0) ≡ trueᵗ
+--             isZeroβ₂ : ∀ {n} → isZero (↑ (suc n)) ≡ falseᵗ
 
 
 --     module Examples (Ra : Razor) where
 --         open Razor Ra
 
---         notᵣ : Tm Bl → Tm Bl
---         notᵣ b = ite b falseᵣ trueᵣ
+--         notᵗ : Tm Bl → Tm Bl
+--         notᵗ b = ite b falseᵗ trueᵗ
 
---         example1 : notᵣ trueᵣ ≡ falseᵣ
+--         example1 : notᵗ trueᵗ ≡ falseᵗ
 --         example1 = iteβ₁
 
---         example2 : (ι 1 +ᵣ ι 2) +ᵣ (ι 3 +ᵣ ι 4) ≡  ι 10
---         example2 = cong (_+ᵣ (_ +ᵣ _)) +β ⊡ cong (_ +ᵣ_) +β ⊡ +β
+--         example2 : (↑ 1 +ᵗ ↑ 2) +ᵗ (↑ 3 +ᵗ ↑ 4) ≡  ↑ 10
+--         example2 = cong (_+ᵗ (_ +ᵗ _)) +β ⊡ cong (_ +ᵗ_) +β ⊡ +β
 
 --     setRa : Razor
 --     setRa .Razor.Ty = Set
 --     setRa .Razor.Tm A = A
 --     setRa .Razor.Bl = Bool
 --     setRa .Razor.Nt = ℕ
---     setRa .Razor.trueᵣ = true
---     setRa .Razor.falseᵣ = false
+--     setRa .Razor.trueᵗ = true
+--     setRa .Razor.falseᵗ = false
 --     setRa .Razor.ite b t f = if b then t else f
---     setRa .Razor.ι n = n
---     setRa .Razor._+ᵣ_ = _+_
+--     setRa .Razor.↑ n = n
+--     setRa .Razor._+ᵗ_ = _+_
 --     setRa .Razor.isZero u = u ≡ᵇ 0
 --     setRa .Razor.iteβ₁ = refl
 --     setRa .Razor.iteβ₂ = refl
@@ -655,13 +834,13 @@ module Chapter2-1 where
 --     trilRa .Razor.Tm A = A
 --     trilRa .Razor.Bl = Maybe Bool
 --     trilRa .Razor.Nt = ℕ
---     trilRa .Razor.trueᵣ = just true
---     trilRa .Razor.falseᵣ = just false
+--     trilRa .Razor.trueᵗ = just true
+--     trilRa .Razor.falseᵗ = just false
 --     trilRa .Razor.ite (just false) t f = f
 --     trilRa .Razor.ite (just true) t f = t
 --     trilRa .Razor.ite {A} nothing t f = t
---     trilRa .Razor.ι n = n
---     trilRa .Razor._+ᵣ_ = _+_
+--     trilRa .Razor.↑ n = n
+--     trilRa .Razor._+ᵗ_ = _+_
 --     trilRa .Razor.isZero u = just (u ≡ᵇ 0)
 --     trilRa .Razor.iteβ₁ = refl
 --     trilRa .Razor.iteβ₂ = refl
@@ -672,13 +851,13 @@ module Chapter2-1 where
 --     module Exercises (Ra : Razor) where
 --         open Razor Ra
 
---         exercise15 : ∀ {A} {u v : Tm A} → trueᵣ ≡ falseᵣ → u ≡ v
+--         exercise15 : ∀ {A} {u v : Tm A} → trueᵗ ≡ falseᵗ → u ≡ v
 --         exercise15 {A} {u} {v} t=f =
 --             sym (iteβ₁ {u = u} {v = v})
 --             ⊡ cong (λ x → ite x _ _) t=f
 --             ⊡ iteβ₂
 
---         exercise16 : ∀ {A} {u v : Tm A} → ι 0 ≡ ι 1 → u ≡ v
+--         exercise16 : ∀ {A} {u v : Tm A} → ↑ 0 ≡ ↑ 1 → u ≡ v
 --         exercise16 0=1 = exercise15 t=f where
 --             t=f : _
 --             t=f = sym isZeroβ₁ ⊡ cong isZero 0=1 ⊡ isZeroβ₂
